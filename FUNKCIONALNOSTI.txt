@@ -39,3 +39,9 @@ UPDATE 2026-10-14 — SOURCE IMPLEMENTATION
 - Catalogue Add game opens collection editor, preselecting the current game.
 - Import / Export navigation opens SQLite backup/restore with safety copy and validation.
 - Pending: on-machine functional smoke test of the new screens, Dashboard UI, media, admin merge/split, manual catalogue editing and advanced flags.
+
+2026-10-14 REPAIR CANDIDATE — DO NOT CLAIM WINDOWS GUI VERIFIED
+- Restored left navigation + center catalogue + right game details + bottom statistics to approximate locked reference screenshots.
+- Bundled a filtered 3,753-record PS2 catalogue seed. First launch imports the seed only if the database has zero games; existing databases remain untouched.
+- Added Windows automated database smoke test: schema, seed import, insert physical copy, close and reopen SQLite, verify persistence.
+- Remaining validation: successful Windows CI, manual screenshot comparison, real GUI click test, and complete approved global catalogue.
