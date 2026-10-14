@@ -159,10 +159,19 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
 
     private void Dashboard_Click(object sender, RoutedEventArgs e) => SetPage("Dashboard", "A quick overview of your catalogue and personal collection.");
     private void Catalogue_Click(object sender, RoutedEventArgs e) => SetPage("Game Catalogue", "Browse the global PlayStation 2 catalogue and its regional releases.");
-    private void Collection_Click(object sender, RoutedEventArgs e) => SetPage("My Collection", "Collection editing will be enabled after the catalogue foundation is verified.");
+    private void Collection_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        new CollectionWindow(_databasePath) { Owner = this }.ShowDialog();
+    }
     private void ImportExport_Click(object sender, RoutedEventArgs e) => SetPage("Import / Export", "Safe source import, backup and restore workflows are planned for the next phase.");
     private void Settings_Click(object sender, RoutedEventArgs e) => SetPage("Settings", "Application and database settings.");
-    private void AddGame_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this, "Manual game/release creation is not implemented in this starter build.", "v0.1 BETA", MessageBoxButton.OK, MessageBoxImage.Information);
+    private void AddGame_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        var selectedId = (GamesGrid.SelectedItem as GameListItem)?.GameId;
+        new CollectionWindow(_databasePath, selectedId) { Owner = this }.ShowDialog();
+    }
     private void GamesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (GamesGrid.SelectedItem is GameListItem selected)
