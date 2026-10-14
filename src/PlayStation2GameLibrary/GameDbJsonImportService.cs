@@ -188,7 +188,7 @@ internal sealed class GameDbJsonImportService
     }
     private static async Task<bool> ExistsAsync(SqliteConnection c, SqliteTransaction t, string sql, string id, CancellationToken ct)
     {
-        await using var cmd = c.CreateCommand(); cmd.Transaction = t; cmd.CommandText = sql; cmd.Parameters.AddWithValue("$id", id); return await cmd.ExecuteScalarAsync(ct) is not null;
+        await using var cmd = c.CreateCommand(); cmd.Transaction = t; cmd.CommandText = sql; cmd.Parameters.AddWithValue("$release", id); return await cmd.ExecuteScalarAsync(ct) is not null;
     }
     private static async Task ExecuteAsync(SqliteConnection c, SqliteTransaction t, string sql, CancellationToken ct, params (string Name, object? Value)[] parameters)
     {
