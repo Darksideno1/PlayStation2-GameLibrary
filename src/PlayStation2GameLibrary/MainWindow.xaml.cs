@@ -149,6 +149,13 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
     private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => await RefreshGamesAsync();
     private async void RegionFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
     private async void ClearFilters_Click(object sender, RoutedEventArgs e) { SearchBox.Clear(); RegionFilter.SelectedIndex = 0; await RefreshGamesAsync(); }
+    private void GameDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (GamesGrid.SelectedItem is not GameListItem selected) return;
+        var details = new GameDetailsWindow(_databasePath, selected.GameId) { Owner = this };
+        details.ShowDialog();
+    }
+
     private void Dashboard_Click(object sender, RoutedEventArgs e) => SetPage("Dashboard", "A quick overview of your catalogue and personal collection.");
     private void Catalogue_Click(object sender, RoutedEventArgs e) => SetPage("Game Catalogue", "Browse the global PlayStation 2 catalogue and its regional releases.");
     private void Collection_Click(object sender, RoutedEventArgs e) => SetPage("My Collection", "Collection editing will be enabled after the catalogue foundation is verified.");
