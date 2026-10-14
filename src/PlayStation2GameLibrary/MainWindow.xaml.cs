@@ -164,7 +164,69 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         if (string.IsNullOrWhiteSpace(_databasePath)) return;
         new CollectionWindow(_databasePath) { Owner = this }.ShowDialog();
     }
-    private void ImportExport_Click(object sender, RoutedEventArgs e) => SetPage("Import / Export", "Safe source import, backup and restore workflows are planned for the next phase.");
+    private async void ImportExport_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        var choice = MessageBox.Show(this,
+            "Yes: create a complete SQLite backup of your catalogue and collection.\nNo: restore a backup (overwrites current data).\nCancel: do nothing.",
+            "Backup / Restore", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        if (choice == MessageBoxResult.Cancel) return;
+        try
+        {
+            if (choice == MessageBoxResult.Yes)
+            {
+                var save = new SaveFileDialog { Title = "Save database backup", Filter = "SQLite database (*.db)|*.db", FileName = $"PS2-Library-Backup-{DateTime.Now:yyyyMMdd-HHmmss}.db" };
+                if (save.ShowDialog(this) != true) return;
+                if (Path.GetFullPath(save.FileName).Equals(Path.GetFullPath(_databasePath), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Choose a different destination from the live database.");
+                await using var source = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly");
+                await using var destination = new SqliteConnection($"Data Source={save.FileName}");
+                await source.OpenAsync();
+                await destination.OpenAsync();
+                source.BackupDatabase(destination);
+                StatusText.Text = $"Backup saved: {save.FileName}";
+            }
+            else
+            {
+                var open = new OpenFileDialog { Title = "Select a PS2 Library database backup", Filter = "SQLite database (*.db)|*.db", CheckFileExists = true };
+                if (open.ShowDialog(this) != true) return;
+                if (Path.GetFullPath(open.FileName).Equals(Path.GetFullPath(_databasePath), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("The selected file is already the active database.");
+                await using (var check = new SqliteConnection($"Data Source={open.FileName};Mode=ReadOnly"))
+                {
+                    await check.OpenAsync();
+                    await using var command = check.CreateCommand();
+                    command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('Game','Release','CollectionCopy')";
+                    if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 3)
+                        throw new InvalidDataException("Not a compatible PS2 Library database backup.");
+                    command.CommandText = "PRAGMA quick_check";
+                    if (!string.Equals((await command.ExecuteScalarAsync())?.ToString(), "ok", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("SQLite integrity check failed; restore cancelled.");
+                }
+                if (MessageBox.Show(this, "Restore will overwrite the current catalogue and personal collection. A safety backup of the current database will be created first. Continue?",
+                    "Confirm restore", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+                var safety = _databasePath + ".before-restore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".db";
+                await using (var current = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly"))
+                await using (var backup = new SqliteConnection($"Data Source={safety}"))
+                {
+                    await current.OpenAsync();
+                    await backup.OpenAsync();
+                    current.BackupDatabase(backup);
+                }
+                await using (var input = new SqliteConnection($"Data Source={open.FileName};Mode=ReadOnly"))
+                await using (var live = new SqliteConnection($"Data Source={_databasePath}"))
+                {
+                    await input.OpenAsync();
+                    await live.OpenAsync();
+                    input.BackupDatabase(live);
+                }
+                await RefreshGamesAsync();
+                StatusText.Text = $"Database restored. Previous database saved as {safety}";
+            }
+            MessageBox.Show(this, StatusText.Text, "Backup / Restore", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Backup / Restore failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
     private void Settings_Click(object sender, RoutedEventArgs e) => SetPage("Settings", "Application and database settings.");
     private void AddGame_Click(object sender, RoutedEventArgs e)
     {
