@@ -233,6 +233,12 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Backup / Restore failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
+    private void Help_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(this,
+            "Catalog: browse and select a game.\nAdd to Collection: record a Physical, Digital or OPL copy.\nMy Collection: view and edit saved copies.\nImport / Export: back up or restore your SQLite database.",
+            "PlayStation 2 Game Library — Help", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
     private void Settings_Click(object sender, RoutedEventArgs e) => SetPage("Settings", "Application and database settings.");
     private void AddGame_Click(object sender, RoutedEventArgs e)
     {
