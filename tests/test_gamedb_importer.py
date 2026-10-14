@@ -9,6 +9,7 @@ class ImporterTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.db=sqlite3.connect(Path(self.tmp.name)/'test.db')
+        self.addCleanup(self.db.close)
         imp.initialize(self.db)
         self.input=ROOT/'tests/fixtures/import_sample.json'
         self.rows=imp.load_records(self.input)
