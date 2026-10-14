@@ -15,6 +15,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         GamesGrid.ItemsSource = _games;
+#if ADMIN_BUILD
+        ImportCatalogueButton.Visibility = Visibility.Visible;
+        Title = "PLAYSTATION 2 GAME LIBRARY — ADMIN — v0.1 BETA";
+#else
+        ImportCatalogueButton.Visibility = Visibility.Collapsed;
+        Title = "PLAYSTATION 2 GAME LIBRARY — v0.1 BETA";
+#endif
         Loaded += async (_, _) => await InitializeDatabaseAsync();
     }
 
@@ -23,7 +30,7 @@ public partial class MainWindow : Window
         try
         {
             var baseDir = AppContext.BaseDirectory;
-            var dataDir = Path.Combine(baseDir, "Data");
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PlayStation2GameLibrary", "Data");
             Directory.CreateDirectory(dataDir);
             _databasePath = Path.Combine(dataDir, "catalogue.db");
             await using var connection = new SqliteConnection($"Data Source={_databasePath}");
