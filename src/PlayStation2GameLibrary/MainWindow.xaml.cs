@@ -50,8 +50,25 @@ public partial class MainWindow : Window
                 command.CommandText = "CREATE TABLE IF NOT EXISTS Game (GameId TEXT PRIMARY KEY, CanonicalTitle TEXT NOT NULL, SortTitle TEXT NOT NULL, FirstReleaseYear INTEGER NULL, Developer TEXT NULL);";
                 await command.ExecuteNonQueryAsync();
             }
+            await using (var countCmd = connection.CreateCommand())
+            {
+                countCmd.CommandText = "SELECT COUNT(*) FROM Game";
+                if (Convert.ToInt64(await countCmd.ExecuteScalarAsync()) == 0)
+                {
+                    var seedPath = Path.Combine(baseDir, "data", "GameDB-PS2.seed.json");
+                    if (!File.Exists(seedPath))
+                        throw new FileNotFoundException("Bundled PS2 catalogue is missing. Extract the complete ZIP.", seedPath);
+                    StatusText.Text = "Preparing the bundled PS2 catalogue for first launch…";
+                    var importer = new GameDbJsonImportService();
+                    var preview = await importer.PreviewAsync(seedPath, _databasePath);
+                    if (preview.AddCount == 0)
+                        throw new InvalidDataException("The bundled catalogue has no importable games.");
+                    await importer.ApplyAsync(preview, _databasePath);
+                }
+            }
             await RefreshGamesAsync();
-            StatusText.Text = $"Database ready: {_databasePath}. Source import is the next implementation step.";
+            await RefreshFooterAsync();
+            StatusText.Text = $"Catalogue ready: {_databasePath}";
         }
         catch (Exception ex)
         {
@@ -105,6 +122,7 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         foreach (var item in results) _games.Add(item);
         ResultCountText.Text = $"{results.Count:N0} results";
         DatabaseCountText.Text = $"Catalogue: {results.Count:N0} shown";
+        FooterCatalogText.Text = $"{results.Count:N0} shown";
     }
 
     private async void ImportCatalogue_Click(object sender, RoutedEventArgs e)
@@ -163,6 +181,7 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
     {
         if (string.IsNullOrWhiteSpace(_databasePath)) return;
         new CollectionWindow(_databasePath) { Owner = this }.ShowDialog();
+        _ = RefreshFooterAsync();
     }
     private async void ImportExport_Click(object sender, RoutedEventArgs e)
     {
@@ -233,13 +252,43 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         if (string.IsNullOrWhiteSpace(_databasePath)) return;
         var selectedId = (GamesGrid.SelectedItem as GameListItem)?.GameId;
         new CollectionWindow(_databasePath, selectedId) { Owner = this }.ShowDialog();
+        _ = RefreshFooterAsync();
     }
     private void GamesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (GamesGrid.SelectedItem is GameListItem selected)
-            StatusText.Text = $"Selected: {selected.Title}. Detailed game and release editor is a Phase 1 follow-up.";
+            { SelectedGameTitleText.Text = selected.Title; SelectedGameInfoText.Text = $"Year: {selected.Year}\\nDeveloper: {selected.Developer}\\nReleases: {selected.ReleaseCount}\\nLanguages: {selected.Languages}"; StatusText.Text = $"Selected: {selected.Title}."; }
     }
     private void SetPage(string title, string subtitle) { PageTitle.Text = title; PageSubtitle.Text = subtitle; }
+
+    private async Task RefreshFooterAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        await using var db = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly");
+        await db.OpenAsync();
+        await using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT CopyType,COUNT(*),COALESCE(SUM(DigitalSizeBytes),0) FROM CollectionCopy GROUP BY CopyType";
+        long physical = 0, digital = 0, opl = 0, bytes = 0;
+        await using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                var type = reader.GetString(0);
+                var count = reader.GetInt64(1);
+                bytes += reader.GetInt64(2);
+                if (type == "Physical") physical = count;
+                else if (type == "Digital") digital = count;
+                else if (type == "OPL") opl = count;
+            }
+        }
+        FooterPhysicalText.Text = physical.ToString("N0");
+        FooterDigitalText.Text = digital.ToString("N0");
+        FooterOplText.Text = opl.ToString("N0");
+        FooterSizeText.Text = $"{bytes / 1_000_000_000.0:0.##} GB";
+        cmd.CommandText = "SELECT COUNT(*) FROM Game";
+        var total = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+        FooterProgressText.Text = total > 0 ? $"{100.0 * (physical + digital + opl) / total:0.0}%" : "0%";
+    }
 
     private sealed class GameListItem
     {
