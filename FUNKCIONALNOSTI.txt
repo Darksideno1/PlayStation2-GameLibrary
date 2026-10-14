@@ -34,3 +34,8 @@ NOT IMPLEMENTED OR NOT VERIFIED
 - Full catalogue enrichment from additional validated sources.
 
 Do not distribute this development baseline as a working release until the Windows build and functional tests pass.
+UPDATE 2026-10-14 — SOURCE IMPLEMENTATION
+- My Collection: add, edit and delete Physical, Digital, OPL copies; optional size in GB; counts and storage total.
+- Catalogue Add game opens collection editor, preselecting the current game.
+- Import / Export navigation opens SQLite backup/restore with safety copy and validation.
+- Pending: on-machine functional smoke test of the new screens, Dashboard UI, media, admin merge/split, manual catalogue editing and advanced flags.
