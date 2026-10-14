@@ -1,0 +1,10 @@
+[
+  {"external_id":"gdb-001","title":"Gran Turismo 4","serial":"SCES-51719","region":"PAL","languages":["English","French","German"],"publisher":"Sony Computer Entertainment","year":2005,"edition":"Standard","release_type":"Retail","disc_number":1},
+  {"external_id":"gdb-002","title":"Gran Turismo 4","serial":"SCUS-97328","region":"NTSC-U","languages":["English","Spanish"],"publisher":"Sony Computer Entertainment America","year":2005,"edition":"Standard","release_type":"Retail","disc_number":1},
+  {"external_id":"gdb-003","title":"Gran Turismo 4","serial":"SCES-51719","region":"PAL","languages":["English"],"publisher":"Sony Computer Entertainment","year":2005,"edition":"Standard","release_type":"Retail","disc_number":1},
+  {"external_id":"gdb-004","title":"Gran Turismo 4","serial":"SCES-51719","region":"PAL","languages":["English","French","German"],"publisher":"Sony Computer Entertainment","year":2005,"edition":"Standard","release_type":"Retail","disc_number":1},
+  {"external_id":"gdb-005","title":"","serial":"SCES-00000","region":"PAL"},
+  {"external_id":"gdb-006","title":"Example with missing evidence","serial":"","region":"","languages":[]},
+  {"external_id":"gdb-007","title":"Broken year","serial":"SLUS_123.45","region":"NTSC-U","languages":"English;Spanish","year":"twenty-oh-five","disc_number":"bad"},
+  {"external_id":"gdb-008","title":"Gran Turismo 4","serial":"SCES-51719","region":"PAL","languages":["English","French","German"],"publisher":"Sony Computer Entertainment","year":2005,"edition":"Standard","release_type":"Retail","disc_number":1}
+]
