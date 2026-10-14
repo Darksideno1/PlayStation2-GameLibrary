@@ -223,7 +223,7 @@ FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.Co
         _size.Text = row.SizeBytes is long bytes ? (bytes / 1_000_000_000m).ToString("0.###", CultureInfo.CurrentCulture) : "";
         _notes.Text = row.Notes;
         _detailTitle.Text = row.Title;
-        _detailBody.Text = $"{row.CopyType} copy  •  {(row.SizeBytes is long bytes ? $"{bytes / 1_000_000_000m:0.###} GB" : "Size not recorded")}";
+        _detailBody.Text = $"{row.CopyType} copy  •  {(row.SizeBytes is long selectedBytes ? $"{selectedBytes / 1_000_000_000m:0.###} GB" : "Size not recorded")}";
     }
 
     private void ClearEditor()
