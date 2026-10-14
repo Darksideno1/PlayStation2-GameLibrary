@@ -31,3 +31,10 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Pending: manual Windows GUI comparison against the locked images and actual clicking through Add to Collection.
 
 - Added WPF GUI smoke-test harness and blocked portable ZIP publication unless the real catalogue/editor UI test passes on Windows CI.
+
+2026-10-14 — Catalogue and locked-Windows UI recovery
+- Restored a light blue-grey three-column catalogue with a right-side selected-game panel and Add to Collection.
+- Bundled a curated real GameDB-PS2 starter catalogue (3,778 conceptual titles) with NTSC-U priority, PAL fallback and Japanese-language-only exclusion.
+- First launch creates the local SQLite database and seeds the catalogue only if no games exist; existing collection entries are preserved.
+- Windows Actions now run catalogue/collection/persistence and GUI smoke tests before publishing USER and ADMIN ZIPs.
+- This is a functional recovery milestone, not a claim that every locked mockup screen is fully reproduced.
