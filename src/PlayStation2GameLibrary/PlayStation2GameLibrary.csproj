@@ -16,5 +16,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
     <Content Include="../../database/schema.sql" Link="database/schema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../data/GameDB-PS2.seed.json" Link="data/GameDB-PS2.seed.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
