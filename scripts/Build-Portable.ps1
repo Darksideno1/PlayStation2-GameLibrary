@@ -35,6 +35,8 @@ try {
     if ($staticExitCode -ne 0) { exit $staticExitCode }
     & $dotnetCommand.Source run --project tests/WindowsSmoke/WindowsSmoke.csproj --configuration Release
     if ($LASTEXITCODE -ne 0) { throw 'Catalogue → Add to Collection → reopen persistence smoke test failed.' }
+    & $dotnetCommand.Source run --project tests/WindowsGuiSmoke/WindowsGuiSmoke.csproj --configuration Release
+    if ($LASTEXITCODE -ne 0) { throw 'Windows WPF Catalog -> Add to Collection UI smoke test failed.' }
     if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
     foreach ($role in @('USER','ADMIN')) {
         $output = Join-Path $Stage $role
