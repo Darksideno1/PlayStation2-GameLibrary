@@ -38,3 +38,9 @@ Development update — 2026-10-14 (collection and backup milestone)
 - First launch creates the local SQLite database and seeds the catalogue only if no games exist; existing collection entries are preserved.
 - Windows Actions now run catalogue/collection/persistence and GUI smoke tests before publishing USER and ADMIN ZIPs.
 - This is a functional recovery milestone, not a claim that every locked mockup screen is fully reproduced.
+
+2026-10-14 — Native WPF legacy-inspired UI phase 1
+- Rebuilt the existing native WPF shell around the archived Windows reference: 58px top titlebar, 230px left navigation, 3-column catalog and details layout, rounded cards and light blue-grey theme.
+- Restyled WPF tables, buttons, inputs and footer; restored Help entry and kept Catalog, My Collection and Add to Collection bound to current SQLite services.
+- Preserved .NET 8, USER/ADMIN compilation, starter catalogue and collection persistence; no legacy files or database schema overwritten.
+- Pending: pixel-level parity and secondary screen design; this release requires Windows CI GUI and persistence tests.
