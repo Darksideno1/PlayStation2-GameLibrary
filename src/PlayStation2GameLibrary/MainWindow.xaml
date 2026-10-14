@@ -65,10 +65,11 @@
                     <Border Grid.Column="0" Background="White" BorderBrush="#D8E6F6" BorderThickness="1" CornerRadius="8" Padding="12">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Top">
-                                <DockPanel Margin="0,0,0,10">
-                                    <TextBox x:Name="SearchBox" Height="33" Padding="9,6" FontSize="12" TextChanged="SearchBox_TextChanged" ToolTip="Search title, publisher, developer or disc serial"/>
-                                    <Button Content="Clear" DockPanel.Dock="Right" Margin="8,0,0,0" Click="ClearFilters_Click"/>
-                                </DockPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SearchBox" Grid.Column="0" Height="33" Padding="9,6" FontSize="12" TextChanged="SearchBox_TextChanged" ToolTip="Search title, publisher, developer or disc serial"/>
+                                    <Button Content="Clear" Grid.Column="1" Margin="8,0,0,0" Click="ClearFilters_Click"/>
+                                </Grid>
                                 <WrapPanel Margin="0,0,0,10">
                                     <ComboBox x:Name="RegionFilter" Width="170" Height="30" SelectionChanged="RegionFilter_SelectionChanged">
                                         <ComboBoxItem Content="All regions" IsSelected="True"/>
