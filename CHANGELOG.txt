@@ -29,3 +29,5 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Added an executable Windows smoke test for seeded SQLite database, collection insertion and persistence after reopen.
 - Required the smoke test and catalogue seed files in the Windows release build.
 - Pending: manual Windows GUI comparison against the locked images and actual clicking through Add to Collection.
+
+- Added WPF GUI smoke-test harness and blocked portable ZIP publication unless the real catalogue/editor UI test passes on Windows CI.
