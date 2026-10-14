@@ -34,8 +34,7 @@ var staThread = new System.Threading.Thread(() =>
                 grid.SelectedIndex = 0;
                 var selected = grid.SelectedItem;
                 if (selected is null) throw new Exception("Cannot select catalogue game.");
-                var copyDialog = new CollectionWindow(Path.Combine(temp, "catalogue.db"),
-                    selected.GetType().GetProperty("GameId")?.GetValue(selected)?.ToString()) { Owner = window };
+                // Use the real catalogue action, not a directly constructed editor.
                 var saved = false;
                 var editorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
                 editorTimer.Tick += (_, _) =>
@@ -43,6 +42,8 @@ var staThread = new System.Threading.Thread(() =>
                     try
                     {
                         if (DateTime.UtcNow > deadline) throw new TimeoutException("Collection editor timed out.");
+                        var copyDialog = Application.Current.Windows.OfType<CollectionWindow>().FirstOrDefault();
+                        if (copyDialog is null) return;
                         var gameBox = FindVisualChildren<ComboBox>(copyDialog).FirstOrDefault(x => x.SelectedValuePath == "Id");
                         if (gameBox?.SelectedValue is not string) return;
                         if (!saved)
@@ -57,10 +58,11 @@ var staThread = new System.Threading.Thread(() =>
                         editorTimer.Stop();
                         copyDialog.Close();
                     }
-                    catch (Exception ex) { error = ex; editorTimer.Stop(); copyDialog.Close(); }
+                    catch (Exception ex) { error = ex; editorTimer.Stop(); Application.Current.Windows.OfType<CollectionWindow>().FirstOrDefault()?.Close(); }
                 };
                 editorTimer.Start();
-                copyDialog.ShowDialog();
+                var addButton = FindVisualChildren<Button>(window).First(x => (string?)x.Content == "+ ADD TO COLLECTION");
+                addButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 if (error is null)
                 {
                     using var db = new SqliteConnection($"Data Source={Path.Combine(temp, "catalogue.db")};Mode=ReadOnly");
@@ -70,7 +72,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("Add to Collection did not persist through UI.");
                     completed = true;
-                    Console.WriteLine("PASS: WPF catalogue loads, collection editor adds game, My Collection SQLite record persists.");
+                    Console.WriteLine("PASS: WPF catalogue button opens editor, adds game, My Collection grid shows entry, SQLite record persists.");
                 }
                 window.Close();
             }
