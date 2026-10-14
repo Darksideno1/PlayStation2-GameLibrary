@@ -1,0 +1,164 @@
+{
+  "source_file": "PS2.data.json",
+  "file_size_bytes": 2656815,
+  "sha256": "471613adebaf40080ab9e96029fb10fea92bbe6a1af33724690e274e7235d9b8",
+  "root_type": "object keyed by source serial/identifier",
+  "records": 13052,
+  "regions": {
+    "NTSC-J": 6443,
+    "PAL": 4255,
+    "NTSC-U": 2354
+  },
+  "field_presence": {
+    "title": {
+      "present": 13052,
+      "missing": 0,
+      "percent": 100.0
+    },
+    "serial": {
+      "present": 13052,
+      "missing": 0,
+      "percent": 100.0
+    },
+    "region": {
+      "present": 13052,
+      "missing": 0,
+      "percent": 100.0
+    },
+    "language": {
+      "present": 12040,
+      "missing": 1012,
+      "percent": 92.25
+    },
+    "genre": {
+      "present": 8810,
+      "missing": 4242,
+      "percent": 67.5
+    },
+    "release_date": {
+      "present": 8514,
+      "missing": 4538,
+      "percent": 65.23
+    },
+    "publisher": {
+      "present": 8384,
+      "missing": 4668,
+      "percent": 64.24
+    },
+    "developer": {
+      "present": 8012,
+      "missing": 5040,
+      "percent": 61.39
+    }
+  },
+  "normalized_serial_duplicate_groups": 1,
+  "records_in_serial_duplicate_groups": 2,
+  "serial_duplicate_examples": [
+    {
+      "normalized_serial": "MH051013",
+      "records": [
+        {
+          "key": "MH-051013",
+          "title": "Tengai Makyou III: Namida (Limited Edition)",
+          "region": "NTSC-J"
+        },
+        {
+          "key": "MH051013",
+          "title": "Tengai Makyou III: Namida: Deluxe Pack",
+          "region": "NTSC-J"
+        }
+      ]
+    }
+  ],
+  "normalized_title_duplicate_groups": 2789,
+  "records_in_normalized_title_duplicate_groups": 8450,
+  "cross_region_title_candidate_groups": 1456,
+  "same_region_title_candidate_groups": 1333,
+  "identical_payload_groups_ignoring_serial": 694,
+  "identical_payload_examples": [
+    [
+      "IIDX16COMP",
+      "IIDX16SP"
+    ],
+    [
+      "KCS-3001",
+      "KCS-3002",
+      "KOEI-65251"
+    ],
+    [
+      "KOEI-20134",
+      "KOEI-20135"
+    ],
+    [
+      "LDTL-00004",
+      "PBPX-95510"
+    ],
+    [
+      "PAPX-90201",
+      "PCPX-96302"
+    ],
+    [
+      "PAPX-90202",
+      "PCPX-96301"
+    ],
+    [
+      "PAPX-90205",
+      "PAPX-90501",
+      "PCPX-96603"
+    ],
+    [
+      "PAPX-90213",
+      "PCPX-96315",
+      "PCPX-96316"
+    ],
+    [
+      "PAPX-90215",
+      "PCPX-96317"
+    ],
+    [
+      "PAPX-90218",
+      "PCPX-96321"
+    ],
+    [
+      "PAPX-90220",
+      "SCPS-55022"
+    ],
+    [
+      "PAPX-90222",
+      "PAPX-90223"
+    ],
+    [
+      "PAPX-90224",
+      "SLPS-25076"
+    ],
+    [
+      "PAPX-90226",
+      "PAPX-90228"
+    ],
+    [
+      "PAPX-90229",
+      "SCPS-15029"
+    ],
+    [
+      "PAPX-90230",
+      "PCPX-96330"
+    ],
+    [
+      "PAPX-90234",
+      "SLPM-60213",
+      "SLPM-60239"
+    ],
+    [
+      "PAPX-90236",
+      "SLPM-60268"
+    ],
+    [
+      "PAPX-90502",
+      "SCPS-15018"
+    ],
+    [
+      "PAPX-90505",
+      "PCPX-96627"
+    ]
+  ]
+}
