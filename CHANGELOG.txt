@@ -44,3 +44,11 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Restyled WPF tables, buttons, inputs and footer; restored Help entry and kept Catalog, My Collection and Add to Collection bound to current SQLite services.
 - Preserved .NET 8, USER/ADMIN compilation, starter catalogue and collection persistence; no legacy files or database schema overwritten.
 - Pending: pixel-level parity and secondary screen design; this release requires Windows CI GUI and persistence tests.
+
+2026-10-14 — My Collection usability and layout update
+- Rebuilt My Collection in native WPF using the approved light blue-grey style.
+- Added five live summary cards: total copies, Physical, Digital, OPL and total digital storage (GB).
+- Added collection title/notes search and format filter without changing SQLite records.
+- Added a split layout: collection list on the left, selected copy details and edit controls on the right.
+- Preserved add/edit/delete, existing game IDs, database schema and the USER/ADMIN portable build.
+- Automated Windows Actions compilation and smoke checks remain release gates.
