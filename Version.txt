@@ -1,0 +1,4 @@
+PLAYSTATION 2 GAME LIBRARY
+Version: 0.1 BETA
+Package status: Windows build pipeline prepared; executable release not yet built or verified.
+Target: Windows 10/11 x64, self-contained .NET 8 WPF publish.
