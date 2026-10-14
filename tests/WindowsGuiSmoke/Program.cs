@@ -13,8 +13,7 @@ Environment.SetEnvironmentVariable("PS2_LIBRARY_DATA_DIR", temp);
 Exception? error = null;
 var completed = false;
 var app = new PlayStation2GameLibrary.App { ShutdownMode = ShutdownMode.OnMainWindowClose };
-app.InitializeComponent();
-// StartupUri is set by App.xaml; Run(window) supplies the test window explicitly.
+// The smoke harness supplies MainWindow explicitly; no StartupUri is needed.
 var window = new MainWindow();
 var deadline = DateTime.UtcNow.AddSeconds(90);
 var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
