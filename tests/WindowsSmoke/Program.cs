@@ -68,6 +68,8 @@ VALUES($copy,'Collector Edition','Yes','Yes','Yes','No','Very Good',$now)";
         cmd.Parameters.AddWithValue("$id", gameId);
         if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 1)
             throw new Exception("Collection entry did not persist after database reopen.");
+        cmd.CommandText = "SELECT Edition || '|' || ManualPresent || '|' || DiscCondition FROM CollectionCopyDetails WHERE CopyId IN (SELECT CopyId FROM CollectionCopy WHERE Notes='Second physical copy')";
+        if ((string?)cmd.ExecuteScalar() != "Collector Edition|No|Very Good") throw new Exception("Per-copy inventory metadata did not persist after reopen.");
         cmd.CommandText = "SELECT COUNT(*) FROM Game";
         if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != initial)
             throw new Exception("Catalogue changed after reopening database.");
