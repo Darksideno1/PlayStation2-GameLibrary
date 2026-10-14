@@ -31,7 +31,7 @@ public partial class MainWindow : Window
         try
         {
             var baseDir = AppContext.BaseDirectory;
-            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PlayStation2GameLibrary", "Data");
+            var dataDir = Environment.GetEnvironmentVariable("PS2_LIBRARY_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PlayStation2GameLibrary", "Data");
             Directory.CreateDirectory(dataDir);
             _databasePath = Path.Combine(dataDir, "catalogue.db");
             await using var connection = new SqliteConnection($"Data Source={_databasePath}");
