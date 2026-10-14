@@ -1,0 +1,15 @@
+PLAYSTATION 2 GAME LIBRARY — CHANGELOG
+
+Development baseline update — 2026-10-11
+- Fixed Python importer field selection and normalization for GameDB-PS2 release_date.
+- Added date format and invalid-date boundary tests.
+- Added C# release_date parsing and invalid/out-of-range warnings (not compiled yet).
+- Added App.xaml startup declaration and shared WPF resources (not Windows-build-verified).
+- Added selected-game details panel and regional-release list (title, region, year, edition, serials and languages) in WPF source; not runtime-verified.
+- Cached normalized game titles during Python full-catalogue apply to avoid quadratic scans.
+- Tightened release identity matching to include release title as well as serial, region, release type and edition.
+- Prevented identical already-imported source rows from being emitted as duplicate-review candidates.
+- Verified full source import and repeat import in an isolated temporary SQLite database: 13,052 source records; repeat import made no entity-count changes.
+- Expanded importer test suite to 11 passing tests.
+
+No production release has been built. Windows/WPF compilation and runtime tests remain pending.
