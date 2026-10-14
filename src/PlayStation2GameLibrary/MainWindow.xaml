@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="PLAYSTATION 2 GAME LIBRARY — v0.1 BETA"
-        Width="1460" Height="860" MinWidth="1100" MinHeight="670"
+        Width="1600" Height="900" MinWidth="1180" MinHeight="680"
         WindowStartupLocation="CenterScreen" Background="#F3F7FC">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -22,31 +22,42 @@
         </Style>
     </Window.Resources>
     <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="82"/></Grid.RowDefinitions>
-        <Grid Grid.Row="0">
+        <Grid.RowDefinitions><RowDefinition Height="58"/><RowDefinition Height="*"/><RowDefinition Height="48"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="White" BorderBrush="#DBE4EF" BorderThickness="0,0,0,1">
+            <DockPanel Margin="22,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left">
+                    <Border Width="33" Height="33" CornerRadius="8" Background="#1261E8" Margin="0,0,11,0"><TextBlock Text="PS2" Foreground="White" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/></Border>
+                    <TextBlock Text="PLAYSTATION 2" FontWeight="Bold" FontSize="15" Foreground="#17233A" VerticalAlignment="Center"/>
+                    <TextBlock Text="  GAME LIBRARY" FontWeight="SemiBold" FontSize="12" Foreground="#70809A" VerticalAlignment="Center"/>
+                    <Border Background="#EAF2FF" CornerRadius="7" Margin="14,0,0,0" Padding="8,4"><TextBlock Text="v0.1 BETA" Foreground="#1261E8" FontSize="10" FontWeight="Bold"/></Border>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Catalog" Click="Catalogue_Click" Margin="0,0,8,0"/>
+                    <Button Content="My Collection" Click="Collection_Click" Style="{StaticResource BlueAction}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="178"/>
+                <ColumnDefinition Width="230"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#DCE7F5" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Margin="13,18,13,25">
-                        <TextBlock Text="PS2" FontSize="26" FontWeight="Bold" Foreground="#126DE0"/>
-                        <TextBlock Text="PlayStation 2" FontWeight="Bold" FontSize="13" Foreground="#193960"/>
-                        <TextBlock Text="GAME LIBRARY" FontSize="9" FontWeight="SemiBold" Foreground="#728BA8"/>
+                    <StackPanel DockPanel.Dock="Top" Margin="16,22,12,24">
+                        <TextBlock Text="WORKSPACE" FontWeight="Bold" FontSize="10" Foreground="#70809A" Margin="10,0,0,10"/>
                     </StackPanel>
                     <StackPanel DockPanel.Dock="Bottom" Margin="15,0,15,20">
                         <TextBlock Text="Version 0.1 BETA" FontSize="10" Foreground="#74859B"/>
                         <TextBlock x:Name="DatabaseCountText" Text="Catalogue: 0 games" FontSize="10" Foreground="#74859B" Margin="0,5,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="8,0">
-                        <Button Style="{StaticResource NavButton}" Content="⌂  Catalog" Click="Catalogue_Click"/>
+                        <Button Style="{StaticResource NavButton}" Content="🎮  Catalog" Click="Catalogue_Click"/>
                         <Button Style="{StaticResource NavButton}" Content="▣  My Collection" Click="Collection_Click"/>
-                        <Button Style="{StaticResource NavButton}" Content="▥  Statistics" Click="Dashboard_Click"/>
-                        <Button Style="{StaticResource NavButton}" Content="⚒  Tools" Click="ImportExport_Click"/>
-                        <Button Style="{StaticResource NavButton}" Content="♙  Admin" Click="Settings_Click"/>
+                        <Button Style="{StaticResource NavButton}" Content="▥  Dashboard / Statistics" Click="Dashboard_Click"/>
                         <Button Style="{StaticResource NavButton}" Content="⇅  Import / Export" Click="ImportExport_Click"/>
                         <Button Style="{StaticResource NavButton}" Content="⚙  Settings" Click="Settings_Click"/>
+                        <Button Style="{StaticResource NavButton}" Content="?  Help" Click="Help_Click"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -57,12 +68,12 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <DockPanel Grid.Row="0" Margin="0,0,0,13">
-                    <TextBlock x:Name="PageTitle" Text="CATALOG" FontSize="22" FontWeight="Bold" Foreground="#143C74"/>
-                    <TextBlock x:Name="PageSubtitle" Text="   Global PlayStation 2 game library" FontSize="11" Foreground="#7088A8" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="PageTitle" Text="🎮 Catalog" FontSize="22" FontWeight="Bold" Foreground="#143C74"/>
+                    <TextBlock x:Name="PageSubtitle" Text="   Browse the worldwide game catalogue" FontSize="11" Foreground="#7088A8" VerticalAlignment="Center"/>
                 </DockPanel>
                 <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="295"/></Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" Background="White" BorderBrush="#D8E6F6" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="320"/></Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="White" BorderBrush="#D8E6F6" BorderThickness="1" CornerRadius="12" Padding="17">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Top">
                                 <Grid Margin="0,0,0,10">
@@ -96,7 +107,7 @@
                             </DataGrid>
                         </DockPanel>
                     </Border>
-                    <Border Grid.Column="1" Background="White" BorderBrush="#D8E6F6" BorderThickness="1" CornerRadius="8" Margin="12,0,0,0" Padding="14">
+                    <Border Grid.Column="1" Background="White" BorderBrush="#D8E6F6" BorderThickness="1" CornerRadius="12" Margin="16,0,0,0" Padding="17">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Bottom">
                                 <Button Content="VIEW DETAILS" Style="{StaticResource BlueAction}" Click="GameDetails_Click"/>
@@ -105,7 +116,7 @@
                             </StackPanel>
                             <StackPanel>
                                 <Border Background="#E7F0FC" CornerRadius="7" Height="165" Margin="0,0,0,13">
-                                    <TextBlock Text="PLAYSTATION 2" Foreground="#5982B7" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Text="NO COVER IMAGE" Foreground="#5982B7" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <TextBlock x:Name="SelectedGameTitleText" Text="Select a game" FontSize="17" FontWeight="Bold" Foreground="#183D73" TextWrapping="Wrap"/>
                                 <TextBlock x:Name="SelectedGameInfoText" Text="Choose a game from the catalogue to see its information and add it to your collection." Foreground="#607A9A" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0"/>
@@ -118,8 +129,8 @@
                 </Border>
             </Grid>
         </Grid>
-        <Border Grid.Row="1" Background="White" BorderBrush="#D8E6F6" BorderThickness="0,1,0,0">
-            <UniformGrid Columns="6" Margin="18,12">
+        <Border Grid.Row="2" Background="White" BorderBrush="#D8E6F6" BorderThickness="0,1,0,0">
+            <UniformGrid Columns="6" Margin="24,5">
                 <StackPanel><TextBlock Text="🎮  CATALOG" Foreground="#6C88A8" FontSize="10"/><TextBlock x:Name="FooterCatalogText" Text="0 games" FontWeight="Bold" Foreground="#125DBA" FontSize="17"/></StackPanel>
                 <StackPanel><TextBlock Text="◉  PHYSICAL" Foreground="#6C88A8" FontSize="10"/><TextBlock x:Name="FooterPhysicalText" Text="0" FontWeight="Bold" Foreground="#125DBA" FontSize="17"/></StackPanel>
                 <StackPanel><TextBlock Text="☁  DIGITAL" Foreground="#6C88A8" FontSize="10"/><TextBlock x:Name="FooterDigitalText" Text="0" FontWeight="Bold" Foreground="#125DBA" FontSize="17"/></StackPanel>
