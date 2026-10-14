@@ -52,3 +52,11 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Added a split layout: collection list on the left, selected copy details and edit controls on the right.
 - Preserved add/edit/delete, existing game IDs, database schema and the USER/ADMIN portable build.
 - Automated Windows Actions compilation and smoke checks remain release gates.
+
+2026-10-14 — My Collection detailed inventory milestone
+- Added independent detailed inventory for each physical copy: edition, cover, case, disc, manual presence and separate condition grades.
+- Added digital format and OPL version, compatibility and VMC status fields.
+- Added optional purchase date, price and seller.
+- Preserved existing CollectionCopy records; new metadata uses a separate foreign-key table with cascade cleanup.
+- Added a detailed inventory editor accessible from the selected My Collection row; existing collection add/edit/delete remains intact.
+- Expanded Windows SQLite persistence smoke test for two distinct physical copies and stored component conditions.
