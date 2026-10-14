@@ -132,6 +132,7 @@ public sealed class CollectionWindow : Window
         edit.Children.Add(actions);
         AddButton(actions, "Add / Save", async (_, _) => await SaveAsync());
         AddButton(actions, "New copy", (_, _) => ClearEditor());
+        AddButton(actions, "Detailed inventory / OPL settings", (_, _) => OpenDetails());
         AddButton(actions, "Delete selected copy", async (_, _) => await DeleteAsync());
         edit.Children.Add(_summary);
         _summary.TextWrapping = TextWrapping.Wrap;
@@ -275,6 +276,16 @@ VALUES($id,$game,$type,$size,$notes,$now,$now)";
             await RefreshAsync(db);
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private void OpenDetails()
+    {
+        if (_grid.SelectedItem is not CopyRow row)
+        {
+            MessageBox.Show(this, "Select and save a collection copy before editing its detailed inventory.", "Select a copy", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        new CopyDetailsWindow(_dbPath, row.CopyId, row.Title, row.CopyType) { Owner = this }.ShowDialog();
     }
 
     private async Task DeleteAsync()
