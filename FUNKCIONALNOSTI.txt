@@ -45,3 +45,10 @@ UPDATE 2026-10-14 — SOURCE IMPLEMENTATION
 - Bundled a filtered 3,753-record PS2 catalogue seed. First launch imports the seed only if the database has zero games; existing databases remain untouched.
 - Added Windows automated database smoke test: schema, seed import, insert physical copy, close and reopen SQLite, verify persistence.
 - Remaining validation: successful Windows CI, manual screenshot comparison, real GUI click test, and complete approved global catalogue.
+
+2026-10-14 RECOVERY MILESTONE
+- First-run offline catalogue: bundled 3,778 GameDB-derived titles and regional release/disc/language records.
+- Persistent SQLite catalogue in local app data; does not overwrite non-empty existing databases.
+- Catalogue -> Add to Collection -> My Collection tested through Windows GUI automation in CI.
+- Restored light blue-grey catalogue layout with right details pane and footer metrics.
+- Still pending: exact locked-design parity for all secondary screens, complete global catalogue and advanced ADMIN functions.
