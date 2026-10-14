@@ -150,3 +150,43 @@ CREATE TABLE IF NOT EXISTS OplTestHistory (
     Result TEXT NOT NULL,
     Notes TEXT NULL
 );
+CREATE TABLE IF NOT EXISTS ImportRun (
+    ImportRunId TEXT PRIMARY KEY,
+    SourceId TEXT NOT NULL REFERENCES Source(SourceId),
+    StartedUtc TEXT NOT NULL,
+    CompletedUtc TEXT NULL,
+    InputSha256 TEXT NOT NULL,
+    InputName TEXT NOT NULL,
+    Status TEXT NOT NULL,
+    SummaryJson TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS SourceRecordSnapshot (
+    SnapshotId TEXT PRIMARY KEY,
+    SourceRecordId TEXT NOT NULL REFERENCES SourceRecord(SourceRecordId),
+    PayloadSha256 TEXT NOT NULL,
+    RawPayloadJson TEXT NOT NULL,
+    CapturedUtc TEXT NOT NULL,
+    UNIQUE(SourceRecordId,PayloadSha256)
+);
+CREATE TABLE IF NOT EXISTS ImportRow (
+    ImportRunId TEXT NOT NULL REFERENCES ImportRun(ImportRunId) ON DELETE CASCADE,
+    RowNumber INTEGER NOT NULL,
+    ExternalId TEXT,
+    PayloadSha256 TEXT NOT NULL,
+    Action TEXT NOT NULL,
+    Reason TEXT NOT NULL,
+    WarningsJson TEXT NOT NULL,
+    RawPayloadJson TEXT NOT NULL,
+    PRIMARY KEY(ImportRunId,RowNumber)
+);
+CREATE TABLE IF NOT EXISTS FieldAssertion (
+    AssertionId TEXT PRIMARY KEY,
+    SourceRecordId TEXT NOT NULL REFERENCES SourceRecord(SourceRecordId),
+    EntityType TEXT NOT NULL,
+    EntityId TEXT NOT NULL,
+    FieldName TEXT NOT NULL,
+    FieldValue TEXT NOT NULL,
+    PayloadSha256 TEXT NOT NULL,
+    ObservedUtc TEXT NOT NULL,
+    UNIQUE(SourceRecordId, FieldName, PayloadSha256)
+);
