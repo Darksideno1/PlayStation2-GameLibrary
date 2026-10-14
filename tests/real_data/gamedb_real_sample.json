@@ -1,0 +1,80 @@
+{
+  "SLUS-20001": {
+    "developer": "Namco",
+    "genre": "Fighting.",
+    "language": "English",
+    "publisher": "Namco",
+    "region": "NTSC-U",
+    "release_date": "2000-10-26",
+    "serial": "SLUS-20001",
+    "title": "Tekken Tag Tournament"
+  },
+  "SLPM-65001": {
+    "developer": "Koei",
+    "genre": "Strategy.",
+    "language": "Japanese",
+    "publisher": "Koei",
+    "region": "NTSC-J",
+    "release_date": "2000-03-04",
+    "serial": "SLPM-65001",
+    "title": "Kessen"
+  },
+  "MH-051013": {
+    "region": "NTSC-J",
+    "serial": "MH-051013",
+    "title": "Tengai Makyou III: Namida (Limited Edition)"
+  },
+  "MH051013": {
+    "developer": "Hudson",
+    "genre": "RPG",
+    "region": "NTSC-J",
+    "release_date": "2005-04-15",
+    "serial": "MH051013",
+    "title": "Tengai Makyou III: Namida: Deluxe Pack"
+  },
+  "SCES-50002": {
+    "developer": "SCEJ",
+    "genre": "Puzzle.",
+    "language": [
+      "English",
+      "French",
+      "German",
+      "Italian",
+      "Spanish"
+    ],
+    "publisher": "Sony",
+    "region": "PAL",
+    "release_date": "2000-11-24",
+    "serial": "SCES-50002",
+    "title": "Fantavision"
+  },
+  "SLKA-25060": {
+    "language": "Korean",
+    "region": "NTSC-J",
+    "serial": "SLKA-25060",
+    "title": "I.Q Remix+: Intelligent Qube"
+  },
+  "DVD-006": {
+    "region": "PAL",
+    "serial": "DVD-006",
+    "title": "Play TV 97"
+  },
+  "GLD-DR01": {
+    "region": "NTSC-U",
+    "serial": "GLD-DR01",
+    "title": "Sony DVD Test Disc"
+  },
+  "ALCH-00001": {
+    "developer": [
+      "Alchemist",
+      "NDCP"
+    ],
+    "genre": "Adventure.",
+    "language": "Japanese",
+    "publisher": "Alchemist",
+    "region": "NTSC-J",
+    "release_date": "2004-11-25",
+    "serial": "ALCH-00001",
+    "title": "Katakamuna: Ushinawareta Ingaritsu [Deluxe Pack]"
+  }
+}
