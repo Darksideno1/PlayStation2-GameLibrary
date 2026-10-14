@@ -13,3 +13,10 @@ Development baseline update — 2026-10-11
 - Expanded importer test suite to 11 passing tests.
 
 No production release has been built. Windows/WPF compilation and runtime tests remain pending.
+Development update — 2026-10-14 (collection and backup milestone)
+- Added a My Collection editor for Physical, Digital and OPL entries, including add, edit and delete.
+- Added optional digital size (GB) and live collection totals.
+- Connected catalogue Add game to the selected game's collection entry form.
+- Added SQLite backup and restore UI with database validation, confirmation and automatic pre-restore safety backup.
+- Kept the existing light theme, English UI and separate USER/ADMIN builds.
+- Automated Windows build and ZIP artifact validation required before this update is distributed.
