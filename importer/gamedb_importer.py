@@ -77,7 +77,7 @@ def normalize_row(row: dict, row_number: int) -> Normalized:
     region=pick(row,'region','region_code','territory')
     langs=parse_languages(pick(row,'languages','language','supported_languages'))
     publisher=pick(row,'publisher','publisher_name')
-    year_raw=pick(row,'year','release_year','date_year')
+    year_raw=pick(row,'year','release_year','date_year','release_date')
     edition=pick(row,'edition','version','release')
     rtype=str(pick(row,'release_type','type','category') or 'Retail').strip()
     disc_raw=pick(row,'disc_number','disc','disc_no')
