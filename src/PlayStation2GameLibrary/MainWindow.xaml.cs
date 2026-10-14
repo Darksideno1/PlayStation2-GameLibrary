@@ -50,22 +50,9 @@ public partial class MainWindow : Window
                 command.CommandText = "CREATE TABLE IF NOT EXISTS Game (GameId TEXT PRIMARY KEY, CanonicalTitle TEXT NOT NULL, SortTitle TEXT NOT NULL, FirstReleaseYear INTEGER NULL, Developer TEXT NULL);";
                 await command.ExecuteNonQueryAsync();
             }
-            await using (var countCmd = connection.CreateCommand())
-            {
-                countCmd.CommandText = "SELECT COUNT(*) FROM Game";
-                if (Convert.ToInt64(await countCmd.ExecuteScalarAsync()) == 0)
-                {
-                    var seedPath = Path.Combine(baseDir, "data", "GameDB-PS2.seed.json");
-                    if (!File.Exists(seedPath))
-                        throw new FileNotFoundException("Bundled PS2 catalogue is missing. Extract the complete ZIP.", seedPath);
-                    StatusText.Text = "Preparing the bundled PS2 catalogue for first launch…";
-                    var importer = new GameDbJsonImportService();
-                    var preview = await importer.PreviewAsync(seedPath, _databasePath);
-                    if (preview.AddCount == 0)
-                        throw new InvalidDataException("The bundled catalogue has no importable games.");
-                    await importer.ApplyAsync(preview, _databasePath);
-                }
-            }
+            // On first launch populate the real SQLite catalogue from bundled GameDB data.
+            // Existing user databases are preserved, including personal collection records.
+            await StarterCatalogue.EnsureSeededAsync(_databasePath, Path.Combine(baseDir, "data", "starter-catalog.json"));
             await RefreshGamesAsync();
             await RefreshFooterAsync();
             StatusText.Text = $"Catalogue ready: {_databasePath}";
