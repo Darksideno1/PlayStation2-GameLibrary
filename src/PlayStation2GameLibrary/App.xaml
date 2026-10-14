@@ -3,24 +3,40 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="PageBackground" Color="#F5F6F8" />
-        <SolidColorBrush x:Key="TextPrimary" Color="#20212A" />
-        <SolidColorBrush x:Key="TextSecondary" Color="#6D7280" />
-        <SolidColorBrush x:Key="BrandPurple" Color="#5D3B91" />
+        <SolidColorBrush x:Key="PageBackground" Color="#F3F6FB" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#17233A" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#70809A" />
+        <SolidColorBrush x:Key="BrandPurple" Color="#1261E8" />
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#17233A"/>
+            <Setter Property="BorderBrush" Value="#DBE4EF"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8FAFE"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EAF0F8"/>
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+        </Style>
         <Style TargetType="Button">
             <Setter Property="Padding" Value="13,8" />
             <Setter Property="Margin" Value="0,3" />
             <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="Foreground" Value="#302B3D" />
-            <Setter Property="BorderBrush" Value="#D9DCE3" />
+            <Setter Property="Foreground" Value="#344864" />
+            <Setter Property="BorderBrush" Value="#DBE4EF" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
         </Style>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="8,10" />
             <Setter Property="Background" Value="#F5F6F8" />
-            <Setter Property="Foreground" Value="#424553" />
+            <Setter Property="Foreground" Value="#344864" />
         </Style>
     </Application.Resources>
 </Application>
