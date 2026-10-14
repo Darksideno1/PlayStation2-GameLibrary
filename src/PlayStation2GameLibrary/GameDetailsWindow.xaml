@@ -1,0 +1,31 @@
+<Window x:Class="PlayStation2GameLibrary.GameDetailsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Game details — PLAYSTATION 2 GAME LIBRARY" Width="1050" Height="650"
+        MinWidth="780" MinHeight="480" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource PageBackground}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock x:Name="GameTitleText" Text="Game title" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap" />
+            <TextBlock x:Name="GameMetadataText" Text="Year · Developer" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,6,0,0" />
+        </StackPanel>
+        <TextBlock Grid.Row="1" Text="Regional releases" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8" />
+        <DataGrid x:Name="ReleasesGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Release title" Binding="{Binding Title}" Width="2*" />
+                <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="110" />
+                <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="75" />
+                <DataGridTextColumn Header="Serial" Binding="{Binding Serial}" Width="125" />
+                <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="1.2*" />
+                <DataGridTextColumn Header="Languages" Binding="{Binding Languages}" Width="1.4*" />
+            </DataGrid.Columns>
+        </DataGrid>
+        <TextBlock x:Name="DetailsStatusText" Grid.Row="3" Margin="0,12,0,0" Foreground="{StaticResource TextSecondary}" FontSize="12" Text="Loading regional releases…" />
+    </Grid>
+</Window>
