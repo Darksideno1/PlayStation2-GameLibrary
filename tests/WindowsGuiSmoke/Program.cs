@@ -31,6 +31,15 @@ var staThread = new System.Threading.Thread(() =>
                 var grid = (DataGrid)window.FindName("GamesGrid");
                 if (grid.Items.Count < 100) return;
                 timer.Stop();
+                window.UpdateLayout();
+                var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    Math.Max(1, (int)window.ActualWidth), Math.Max(1, (int)window.ActualHeight),
+                    96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                bitmap.Render(window);
+                var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+                var screenshotPath = Path.Combine(Directory.GetCurrentDirectory(), "tests", "WindowsGuiSmoke", "catalogue-screenshot.png");
+                using (var stream = File.Create(screenshotPath)) png.Save(stream);
                 grid.SelectedIndex = 0;
                 var selected = grid.SelectedItem;
                 if (selected is null) throw new Exception("Cannot select catalogue game.");
