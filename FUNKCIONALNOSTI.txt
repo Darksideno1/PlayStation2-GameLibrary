@@ -52,3 +52,10 @@ UPDATE 2026-10-14 — SOURCE IMPLEMENTATION
 - Catalogue -> Add to Collection -> My Collection tested through Windows GUI automation in CI.
 - Restored light blue-grey catalogue layout with right details pane and footer metrics.
 - Still pending: exact locked-design parity for all secondary screens, complete global catalogue and advanced ADMIN functions.
+
+NATIVE WPF UI PHASE 1
+- Archived design-inspired shell with top titlebar, 230px sidebar, catalogue table, right game details and footer statistics.
+- Catalog, game selection, Add to Collection and My Collection retain the existing database-backed actions.
+- Existing offline GameDB starter catalogue and local SQLite storage unchanged.
+- Help navigation now opens actual usage guidance.
+- Dashboard, media and advanced ADMIN workflows remain future work; no unsupported completion claims.
