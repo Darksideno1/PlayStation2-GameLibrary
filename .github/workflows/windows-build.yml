@@ -1,0 +1,35 @@
+name: Windows portable build
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: ps2-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify complete project
+        shell: pwsh
+        run: |
+          $required = @('Version.txt','README.md','FUNKCIONALNOSTI.txt','database/schema.sql','scripts/Build-Portable.ps1','scripts/Run-Source-Checks.ps1','src/PlayStation2GameLibrary/App.xaml','src/PlayStation2GameLibrary/App.xaml.cs','src/PlayStation2GameLibrary/MainWindow.xaml','src/PlayStation2GameLibrary/MainWindow.xaml.cs','src/PlayStation2GameLibrary/GameDetailsWindow.xaml','src/PlayStation2GameLibrary/GameDetailsWindow.xaml.cs','src/PlayStation2GameLibrary/GameDbJsonImportService.cs','src/PlayStation2GameLibrary/PlayStation2GameLibrary.csproj','importer/gamedb_importer.py','tests/test_gamedb_importer.py','tests/test_real_gamedb_shape.py','tests/validate_static.py','docs/PORTABLE_USER_GUIDE.md','docs/WINDOWS_FIRST_BUILD_AND_TEST.md')
+          foreach ($file in $required) { if (-not (Test-Path $file)) { throw "Missing project file: $file" } }
+      - name: Build USER and ADMIN portable package
+        shell: pwsh
+        run: ./scripts/Build-Portable.ps1
+      - name: Publish Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_WINDOWS
+          path: dist/PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_PORTABLE.zip
+          if-no-files-found: error
