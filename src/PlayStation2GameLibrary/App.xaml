@@ -1,0 +1,26 @@
+<Application x:Class="PlayStation2GameLibrary.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="PageBackground" Color="#F5F6F8" />
+        <SolidColorBrush x:Key="TextPrimary" Color="#20212A" />
+        <SolidColorBrush x:Key="TextSecondary" Color="#6D7280" />
+        <SolidColorBrush x:Key="BrandPurple" Color="#5D3B91" />
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="13,8" />
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="Foreground" Value="#302B3D" />
+            <Setter Property="BorderBrush" Value="#D9DCE3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="8,10" />
+            <Setter Property="Background" Value="#F5F6F8" />
+            <Setter Property="Foreground" Value="#424553" />
+        </Style>
+    </Application.Resources>
+</Application>
