@@ -1,0 +1,36 @@
+PLAYSTATION 2 GAME LIBRARY v0.1 BETA — DEVELOPMENT STATUS
+Last updated: 2026-10-11
+Current baseline: development source tree; NOT a verified Windows release.
+
+IMPLEMENTED IN SOURCE (not yet Windows-runtime verified)
+- WPF main-window catalogue shell with search, region filter, catalogue grid and navigation placeholders.
+- WPF App.xaml startup declaration and shared UI resources.
+- SQLite schema for conceptual games, regional releases, discs, languages, source provenance, import history, review queue and collection entities.
+- Python reference importer with preview/apply, explicit approval gate, transaction, source snapshots and idempotence tests.
+- C# JSON import service connected to the Import catalogue button, with preview summary, row-level preview export, explicit confirmation and transactional apply path.
+- GameDB-PS2 release_date parsing fix in Python importer; C# parser updated in source but not compiled.
+
+VERIFIED IN THIS ENVIRONMENT
+- Actual local PS2.data.json inspected: 13,052 keyed records; 8,514 non-empty release_date values; observed formats YYYY (399), YYYY-MM (49), YYYY-MM-DD (8,066), and 4,538 empty/null values.
+- Python unit tests: 11 passed on 2026-10-11.
+- Python bytecode compilation: passed.
+- Static schema/XAML/project checks: passed, including App.xaml startup/resources.
+- Prior full import idempotence evidence remains in reports, but does not verify the C# UI import.
+
+PARTIAL / REQUIRES FURTHER TESTING
+- C# JSON import service has not been compiled or run; source-level logic is not proof of a functioning UI import.
+- Catalogue list, search, regional filters and the new details panel have not been runtime-tested on Windows.
+- Game concept grouping currently relies on normalized title as a first-pass heuristic; human-reviewed matching and better identity signals are needed.
+- Regional release details are read-only; editing and manual duplicate resolution are not implemented.
+- Schema and data-directory deployment require validation in an actual packaged Windows build.
+
+NOT IMPLEMENTED OR NOT VERIFIED
+- Actual Windows/.NET build and launch tests (dotnet SDK unavailable in current environment).
+- Full details/release view and editor.
+- Reliable manual duplicate resolution UI.
+- Collection management UI and CSV/JSON backup/restore.
+- Cover/back/spine/disc media management.
+- Separate USER/ADMIN packaging and release validation.
+- Full catalogue enrichment from additional validated sources.
+
+Do not distribute this development baseline as a working release until the Windows build and functional tests pass.
