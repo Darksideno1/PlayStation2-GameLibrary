@@ -20,3 +20,12 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Added SQLite backup and restore UI with database validation, confirmation and automatic pre-restore safety backup.
 - Kept the existing light theme, English UI and separate USER/ADMIN builds.
 - Automated Windows build and ZIP artifact validation required before this update is distributed.
+
+2026-10-14 — LOCKED UI / FIRST-LAUNCH CATALOGUE REPAIR (candidate; pending Windows smoke validation)
+- Replaced the unrelated two-column shell with a light blue-white layout following Zaklenjen windows.zip reference: left navigation, catalogue list, right game summary/actions and bottom collection statistics.
+- Bundled 3,753 preferred-region GameDB-PS2 source records, selected from the provided 13,052-record dataset (NTSC-U preferred; PAL otherwise; Japanese English-language entries only). This is a filtered seed, not yet the full catalogue.
+- Added first-launch import into persistent local SQLite database; existing nonempty databases are not overwritten.
+- Connected selected-game detail display and collection statistics footer.
+- Added an executable Windows smoke test for seeded SQLite database, collection insertion and persistence after reopen.
+- Required the smoke test and catalogue seed files in the Windows release build.
+- Pending: manual Windows GUI comparison against the locked images and actual clicking through Add to Collection.
