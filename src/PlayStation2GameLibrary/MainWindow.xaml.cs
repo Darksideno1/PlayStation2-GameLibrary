@@ -257,7 +257,7 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
     private void GamesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (GamesGrid.SelectedItem is GameListItem selected)
-            { SelectedGameTitleText.Text = selected.Title; SelectedGameInfoText.Text = $"Year: {selected.Year}\\nDeveloper: {selected.Developer}\\nReleases: {selected.ReleaseCount}\\nLanguages: {selected.Languages}"; StatusText.Text = $"Selected: {selected.Title}."; }
+            { SelectedGameTitleText.Text = selected.Title; SelectedGameInfoText.Text = $"Year: {selected.Year}\nDeveloper: {selected.Developer}\nReleases: {selected.ReleaseCount}\nLanguages: {selected.Languages}"; StatusText.Text = $"Selected: {selected.Title}."; }
     }
     private void SetPage(string title, string subtitle) { PageTitle.Text = title; PageSubtitle.Text = subtitle; }
 
