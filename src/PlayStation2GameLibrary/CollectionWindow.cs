@@ -129,7 +129,7 @@ public sealed class CollectionWindow : Window
         _notes.MinHeight = 68;
         var actions = new StackPanel { Margin = new Thickness(0, 15, 0, 0) };
         edit.Children.Add(actions);
-        AddButton(actions, "Save copy", async (_, _) => await SaveAsync());
+        AddButton(actions, "Add / Save", async (_, _) => await SaveAsync());
         AddButton(actions, "New copy", (_, _) => ClearEditor());
         AddButton(actions, "Delete selected copy", async (_, _) => await DeleteAsync());
         edit.Children.Add(_summary);
