@@ -33,6 +33,8 @@ try {
     & $pythonCommand @pythonPrefixArgs tests/validate_static.py
     $staticExitCode = $LASTEXITCODE
     if ($staticExitCode -ne 0) { exit $staticExitCode }
+    & $dotnetCommand.Source run --project tests/WindowsSmoke/WindowsSmoke.csproj --configuration Release
+    if ($LASTEXITCODE -ne 0) { throw 'Catalogue → Add to Collection → reopen persistence smoke test failed.' }
     if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
     foreach ($role in @('USER','ADMIN')) {
         $output = Join-Path $Stage $role
@@ -43,6 +45,9 @@ try {
         $schemaTarget = Join-Path $output 'database'
         New-Item -ItemType Directory -Path $schemaTarget -Force | Out-Null
         Copy-Item (Join-Path $ProjectRoot 'database/schema.sql') (Join-Path $schemaTarget 'schema.sql') -Force
+        $seedTarget = Join-Path $output 'data'
+        New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
+        Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
     foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','README.md')) {
         if (Test-Path $file) { Copy-Item $file $Stage -Force }
@@ -59,7 +64,7 @@ This is a beta package; runtime functionality must still be verified on Windows.
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
