@@ -44,6 +44,22 @@ VALUES($id,$game,'Physical',NULL,'Smoke test', $now,$now)";
         cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O"));
         await cmd.ExecuteNonQueryAsync();
     }
+    // Two physical copies of the same game retain independent metadata.
+    await using (var detailDb = new SqliteConnection($"Data Source={dbPath}"))
+    {
+        await detailDb.OpenAsync();
+        await using var cmd = detailDb.CreateCommand();
+        cmd.CommandText = @"INSERT INTO CollectionCopy(CopyId,GameId,CopyType,Notes,CreatedUtc,UpdatedUtc)
+VALUES($copy,$game,'Physical','Second physical copy',$now,$now)";
+        var secondId = Guid.NewGuid().ToString("D");
+        cmd.Parameters.AddWithValue("$copy", secondId);
+        cmd.Parameters.AddWithValue("$game", gameId);
+        cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O"));
+        await cmd.ExecuteNonQueryAsync();
+        cmd.CommandText = @"INSERT INTO CollectionCopyDetails(CopyId,Edition,CoverPresent,CasePresent,DiscPresent,ManualPresent,DiscCondition,UpdatedUtc)
+VALUES($copy,'Collector Edition','Yes','Yes','Yes','No','Very Good',$now)";
+        await cmd.ExecuteNonQueryAsync();
+    }
     await using (var reopened = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly"))
     {
         await reopened.OpenAsync();
