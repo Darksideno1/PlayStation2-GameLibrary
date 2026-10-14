@@ -190,3 +190,25 @@ CREATE TABLE IF NOT EXISTS FieldAssertion (
     ObservedUtc TEXT NOT NULL,
     UNIQUE(SourceRecordId, FieldName, PayloadSha256)
 );
+
+-- Per-copy metadata; separate from the catalogue and existing CollectionCopy IDs.
+CREATE TABLE IF NOT EXISTS CollectionCopyDetails (
+    CopyId TEXT PRIMARY KEY REFERENCES CollectionCopy(CopyId) ON DELETE CASCADE,
+    Edition TEXT NOT NULL DEFAULT 'Standard',
+    CoverPresent TEXT NOT NULL DEFAULT 'Unknown',
+    CasePresent TEXT NOT NULL DEFAULT 'Unknown',
+    DiscPresent TEXT NOT NULL DEFAULT 'Unknown',
+    ManualPresent TEXT NOT NULL DEFAULT 'Unknown',
+    CoverCondition TEXT NOT NULL DEFAULT 'Not rated',
+    CaseCondition TEXT NOT NULL DEFAULT 'Not rated',
+    DiscCondition TEXT NOT NULL DEFAULT 'Not rated',
+    ManualCondition TEXT NOT NULL DEFAULT 'Not rated',
+    DigitalFormat TEXT NOT NULL DEFAULT '',
+    OplVersion TEXT NOT NULL DEFAULT '',
+    OplCompatibility TEXT NOT NULL DEFAULT 'Not tested',
+    VmcStatus TEXT NOT NULL DEFAULT 'Not tested',
+    PurchaseDate TEXT NOT NULL DEFAULT '',
+    PurchasePrice TEXT NOT NULL DEFAULT '',
+    Seller TEXT NOT NULL DEFAULT '',
+    UpdatedUtc TEXT NOT NULL
+);
