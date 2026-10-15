@@ -1,67 +1,56 @@
 PLAYSTATION 2 GAME LIBRARY v0.1 BETA — DEVELOPMENT STATUS
-Last updated: 2026-10-11
-Current baseline: development source tree; NOT a verified Windows release.
+Last updated: 2026-10-15
+Current baseline: Windows CI-verified development baseline; portable release artifact is built by GitHub Actions after every successful main-branch build.
 
-IMPLEMENTED IN SOURCE (not yet Windows-runtime verified)
-- WPF main-window catalogue shell with search, region filter, catalogue grid and navigation placeholders.
+IMPLEMENTED IN SOURCE
+- WPF main-window catalogue shell with search, region filter, catalogue grid and navigation.
 - WPF App.xaml startup declaration and shared UI resources.
 - SQLite schema for conceptual games, regional releases, discs, languages, source provenance, import history, review queue and collection entities.
 - Python reference importer with preview/apply, explicit approval gate, transaction, source snapshots and idempotence tests.
 - C# JSON import service connected to the Import catalogue button, with preview summary, row-level preview export, explicit confirmation and transactional apply path.
-- GameDB-PS2 release_date parsing fix in Python importer; C# parser updated in source but not compiled.
+- My Collection with independent Physical, Digital and OPL copies, multiple copies of the same game, digital sizes, notes, filters and totals.
+- Per-copy physical inventory: edition, cover/case/disc/manual presence and independent component condition.
+- Per-copy Digital/OPL metadata: file format, OPL version, compatibility and VMC status.
+- Optional per-copy purchase date, price and seller.
+- Saved per-copy inventory/OPL details are shown directly in the My Collection right-side panel when a row is selected; the separate details window remains the editor.
+- SQLite backup/restore with validation, overwrite confirmation and pre-restore safety backup.
+- Separate USER and ADMIN portable builds.
 
-VERIFIED IN THIS ENVIRONMENT
-- Actual local PS2.data.json inspected: 13,052 keyed records; 8,514 non-empty release_date values; observed formats YYYY (399), YYYY-MM (49), YYYY-MM-DD (8,066), and 4,538 empty/null values.
-- Python unit tests: 11 passed on 2026-10-11.
-- Python bytecode compilation: passed.
-- Static schema/XAML/project checks: passed, including App.xaml startup/resources.
-- Prior full import idempotence evidence remains in reports, but does not verify the C# UI import.
+VERIFIED BY WINDOWS CI / AUTOMATED SMOKE TESTS
+- Starter catalogue creation and persistence in SQLite.
+- Catalogue -> Add to Collection -> My Collection GUI flow.
+- Collection insert and persistence after database reopen.
+- Two distinct copies of the same game are retained independently.
+- Detailed physical inventory persists after database reopen.
+- Windows portable USER and ADMIN build/package pipeline.
 
-PARTIAL / REQUIRES FURTHER TESTING
-- C# JSON import service has not been compiled or run; source-level logic is not proof of a functioning UI import.
-- Catalogue list, search, regional filters and the new details panel have not been runtime-tested on Windows.
-- Game concept grouping currently relies on normalized title as a first-pass heuristic; human-reviewed matching and better identity signals are needed.
-- Regional release details are read-only; editing and manual duplicate resolution are not implemented.
-- Schema and data-directory deployment require validation in an actual packaged Windows build.
+DATA / IMPORT VERIFICATION
+- Actual local PS2.data.json previously inspected: 13,052 keyed records; 8,514 non-empty release_date values; observed formats YYYY (399), YYYY-MM (49), YYYY-MM-DD (8,066), and 4,538 empty/null values.
+- Python importer unit tests and idempotence checks are retained in the test suite.
+- Bundled starter catalogue uses preferred-region selection rules and is only seeded when the local catalogue is empty.
 
-NOT IMPLEMENTED OR NOT VERIFIED
-- Actual Windows/.NET build and launch tests (dotnet SDK unavailable in current environment).
-- Full details/release view and editor.
-- Reliable manual duplicate resolution UI.
-- Collection management UI and CSV/JSON backup/restore.
-- Cover/back/spine/disc media management.
-- Separate USER/ADMIN packaging and release validation.
-- Full catalogue enrichment from additional validated sources.
+MY COLLECTION — CURRENT STATUS
+- Physical / Digital / OPL: implemented.
+- Multiple copies of the same game: implemented and smoke-tested.
+- Physical cover, case, disc and manual presence/condition: implemented and persisted per copy.
+- Digital size in GB: implemented with live total storage calculation.
+- OPL version, compatibility and VMC status: implemented per copy.
+- Add, edit, delete and persistent SQLite save/reopen: implemented.
+- Selected-copy details without an extra click: implemented; saved inventory/OPL information appears in the right panel.
+- Detailed inventory / OPL settings editor remains available for changing those values.
 
-Do not distribute this development baseline as a working release until the Windows build and functional tests pass.
-UPDATE 2026-10-14 — SOURCE IMPLEMENTATION
-- My Collection: add, edit and delete Physical, Digital, OPL copies; optional size in GB; counts and storage total.
-- Catalogue Add game opens collection editor, preselecting the current game.
-- Import / Export navigation opens SQLite backup/restore with safety copy and validation.
-- Pending: on-machine functional smoke test of the new screens, Dashboard UI, media, admin merge/split, manual catalogue editing and advanced flags.
+PARTIAL / REQUIRES FURTHER WORK
+- Exact visual parity of all secondary screens with the locked reference still needs manual design refinement.
+- Complete global catalogue selection/enrichment remains to be finalized beyond the bundled starter catalogue.
+- Regional release editing and robust manual duplicate merge/split workflows are not complete.
+- Dashboard/Statistics screen is not complete.
+- Media management (primary image, front/back cover, disc image, manual) is not complete.
+- Advanced ADMIN catalogue editing (languages, regions, flags, descriptions, genres, merge/split) is not complete.
 
-2026-10-14 REPAIR CANDIDATE — DO NOT CLAIM WINDOWS GUI VERIFIED
-- Restored left navigation + center catalogue + right game details + bottom statistics to approximate locked reference screenshots.
-- Bundled a filtered 3,753-record PS2 catalogue seed. First launch imports the seed only if the database has zero games; existing databases remain untouched.
-- Added Windows automated database smoke test: schema, seed import, insert physical copy, close and reopen SQLite, verify persistence.
-- Remaining validation: successful Windows CI, manual screenshot comparison, real GUI click test, and complete approved global catalogue.
+NEXT DEVELOPMENT ORDER
+1. Dashboard / Statistics using the now-complete collection data model and totals.
+2. Media management and primary-image workflow.
+3. ADMIN catalogue editing and merge/split workflows.
+4. Complete catalogue enrichment/import review and final UI polish.
 
-2026-10-14 RECOVERY MILESTONE
-- First-run offline catalogue: bundled 3,778 GameDB-derived titles and regional release/disc/language records.
-- Persistent SQLite catalogue in local app data; does not overwrite non-empty existing databases.
-- Catalogue -> Add to Collection -> My Collection tested through Windows GUI automation in CI.
-- Restored light blue-grey catalogue layout with right details pane and footer metrics.
-- Still pending: exact locked-design parity for all secondary screens, complete global catalogue and advanced ADMIN functions.
-
-NATIVE WPF UI PHASE 1
-- Archived design-inspired shell with top titlebar, 230px sidebar, catalogue table, right game details and footer statistics.
-- Catalog, game selection, Add to Collection and My Collection retain the existing database-backed actions.
-- Existing offline GameDB starter catalogue and local SQLite storage unchanged.
-- Help navigation now opens actual usage guidance.
-- Dashboard, media and advanced ADMIN workflows remain future work; no unsupported completion claims.
-
-MY COLLECTION UI UPDATE
-- Collection list with search and Physical/Digital/OPL filters.
-- Live cards with total copies and storage GB.
-- Right-side details and add/edit/delete panel, preserving SQLite CollectionCopy persistence.
-- Existing catalogue, import, backup and USER/ADMIN separation unchanged.
+Do not replace the current project with legacy source. The archived/old build remains a visual and functional reference only.
