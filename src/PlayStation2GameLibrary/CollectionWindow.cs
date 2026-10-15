@@ -28,6 +28,7 @@ public sealed class CollectionWindow : Window
     private readonly ComboBox _filter = new() { Width = 150, Height = 34 };
     private readonly TextBlock _detailTitle = new() { FontSize = 20, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _detailBody = new() { TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(79, 101, 130)) };
+    private readonly TextBlock _inventorySummary = new() { TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(47, 67, 94)) };
     private readonly TextBlock _total = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private readonly TextBlock _physical = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private readonly TextBlock _digital = new() { FontSize = 22, FontWeight = FontWeights.Bold };
@@ -99,7 +100,7 @@ public sealed class CollectionWindow : Window
         _view.Filter = MatchesFilter;
         _search.TextChanged += (_, _) => _view?.Refresh();
         _filter.SelectionChanged += (_, _) => _view?.Refresh();
-        _grid.SelectionChanged += (_, _) => SelectCopy();
+        _grid.SelectionChanged += async (_, _) => await SelectCopyAsync();
         var side = new Border { Margin = new Thickness(16, 0, 0, 0), Background = Brushes.White, BorderBrush = Brush("#DBE4EF"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(18) };
         Grid.SetColumn(side, 1);
         layout.Children.Add(side);
@@ -111,7 +112,9 @@ public sealed class CollectionWindow : Window
         edit.Children.Add(_detailTitle);
         _detailTitle.Margin = new Thickness(0, 10, 0, 7);
         edit.Children.Add(_detailBody);
-        _detailBody.Margin = new Thickness(0, 0, 0, 14);
+        _detailBody.Margin = new Thickness(0, 0, 0, 10);
+        edit.Children.Add(_inventorySummary);
+        _inventorySummary.Margin = new Thickness(0, 0, 0, 14);
         edit.Children.Add(FieldLabel("Game"));
         edit.Children.Add(_game);
         _game.MaxWidth = 310;
@@ -132,7 +135,7 @@ public sealed class CollectionWindow : Window
         edit.Children.Add(actions);
         AddButton(actions, "Add / Save", async (_, _) => await SaveAsync());
         AddButton(actions, "New copy", (_, _) => ClearEditor());
-        AddButton(actions, "Detailed inventory / OPL settings", (_, _) => OpenDetails());
+        AddButton(actions, "Detailed inventory / OPL settings", async (_, _) => await OpenDetailsAsync());
         AddButton(actions, "Delete selected copy", async (_, _) => await DeleteAsync());
         edit.Children.Add(_summary);
         _summary.TextWrapping = TextWrapping.Wrap;
@@ -156,6 +159,7 @@ public sealed class CollectionWindow : Window
         stack.Children.Add(number);
         parent.Children.Add(card);
     }
+
     private bool MatchesFilter(object item)
     {
         if (item is not CopyRow row) return false;
@@ -165,7 +169,6 @@ public sealed class CollectionWindow : Window
         return term.Length == 0 || row.Title.Contains(term, StringComparison.OrdinalIgnoreCase) || row.Notes.Contains(term, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static TextBlock Label(string text) => new() { Text = text, Margin = new Thickness(12, 6, 6, 0), VerticalAlignment = VerticalAlignment.Center };
     private static void AddButton(Panel parent, string label, RoutedEventHandler click)
     {
         var button = new Button { Content = label, Padding = new Thickness(14, 7, 14, 7), Margin = new Thickness(0, 0, 8, 0) };
@@ -216,7 +219,7 @@ FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.Co
         _summary.Text = $"{rows.Count} copies  •  Physical: {rows.Count(r => r.CopyType == "Physical")}  •  Digital: {rows.Count(r => r.CopyType == "Digital")}  •  OPL: {rows.Count(r => r.CopyType == "OPL")}  •  Digital storage: {gb:0.##} GB";
     }
 
-    private void SelectCopy()
+    private async Task SelectCopyAsync()
     {
         if (_grid.SelectedItem is not CopyRow row) return;
         _editingCopyId = row.CopyId;
@@ -226,6 +229,55 @@ FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.Co
         _notes.Text = row.Notes;
         _detailTitle.Text = row.Title;
         _detailBody.Text = $"{row.CopyType} copy  •  {(row.SizeBytes is long selectedBytes ? $"{selectedBytes / 1_000_000_000m:0.###} GB" : "Size not recorded")}";
+        await LoadSelectedDetailsAsync(row);
+    }
+
+    private async Task LoadSelectedDetailsAsync(CopyRow row)
+    {
+        _inventorySummary.Text = row.CopyType switch
+        {
+            "Physical" => "Inventory details not recorded yet.",
+            "Digital" => "Digital format not recorded yet.",
+            "OPL" => "OPL settings not recorded yet.",
+            _ => ""
+        };
+        try
+        {
+            await using var db = new SqliteConnection($"Data Source={_dbPath}");
+            await db.OpenAsync();
+            await using var cmd = db.CreateCommand();
+            cmd.CommandText = @"SELECT Edition,CoverPresent,CasePresent,DiscPresent,ManualPresent,
+CoverCondition,CaseCondition,DiscCondition,ManualCondition,DigitalFormat,OplVersion,OplCompatibility,VmcStatus,
+PurchaseDate,PurchasePrice,Seller
+FROM CollectionCopyDetails WHERE CopyId=$id";
+            cmd.Parameters.AddWithValue("$id", row.CopyId);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return;
+
+            string S(int index) => reader.IsDBNull(index) ? "" : reader.GetString(index);
+            var extra = new List<string>();
+            if (row.CopyType == "Physical")
+            {
+                extra.Add($"Edition: {S(0)}");
+                extra.Add($"Included — Cover: {S(1)}, Case: {S(2)}, Disc: {S(3)}, Manual: {S(4)}");
+                extra.Add($"Condition — Cover: {S(5)}, Case: {S(6)}, Disc: {S(7)}, Manual: {S(8)}");
+            }
+            if (row.CopyType is "Digital" or "OPL")
+                extra.Add(string.IsNullOrWhiteSpace(S(9)) ? "File format: not recorded" : $"File format: {S(9)}");
+            if (row.CopyType == "OPL")
+            {
+                extra.Add(string.IsNullOrWhiteSpace(S(10)) ? "OPL version: not recorded" : $"OPL version: {S(10)}");
+                extra.Add($"Compatibility: {S(11)}  •  VMC: {S(12)}");
+            }
+            if (!string.IsNullOrWhiteSpace(S(13))) extra.Add($"Purchased: {S(13)}");
+            if (!string.IsNullOrWhiteSpace(S(14))) extra.Add($"Price: {S(14)}");
+            if (!string.IsNullOrWhiteSpace(S(15))) extra.Add($"Source: {S(15)}");
+            _inventorySummary.Text = string.Join(Environment.NewLine, extra);
+        }
+        catch (Exception ex)
+        {
+            _inventorySummary.Text = $"Could not load detailed copy information: {ex.Message}";
+        }
     }
 
     private void ClearEditor()
@@ -237,6 +289,7 @@ FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.Co
         _notes.Clear();
         _detailTitle.Text = "Add a collection copy";
         _detailBody.Text = "Choose a game and format, then save. Select an existing row to edit its details.";
+        _inventorySummary.Text = "Saved inventory and OPL details appear here immediately when you select a copy.";
     }
 
     private async Task SaveAsync()
@@ -278,14 +331,16 @@ VALUES($id,$game,$type,$size,$notes,$now,$now)";
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
-    private void OpenDetails()
+    private async Task OpenDetailsAsync()
     {
         if (_grid.SelectedItem is not CopyRow row)
         {
             MessageBox.Show(this, "Select and save a collection copy before editing its detailed inventory.", "Select a copy", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        new CopyDetailsWindow(_dbPath, row.CopyId, row.Title, row.CopyType) { Owner = this }.ShowDialog();
+        var dialog = new CopyDetailsWindow(_dbPath, row.CopyId, row.Title, row.CopyType) { Owner = this };
+        dialog.ShowDialog();
+        await LoadSelectedDetailsAsync(row);
     }
 
     private async Task DeleteAsync()
