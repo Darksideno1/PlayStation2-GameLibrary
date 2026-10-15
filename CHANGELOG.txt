@@ -60,3 +60,11 @@ Development update — 2026-10-14 (collection and backup milestone)
 - Preserved existing CollectionCopy records; new metadata uses a separate foreign-key table with cascade cleanup.
 - Added a detailed inventory editor accessible from the selected My Collection row; existing collection add/edit/delete remains intact.
 - Expanded Windows SQLite persistence smoke test for two distinct physical copies and stored component conditions.
+
+2026-10-15 — My Collection selected-copy detail completion
+- Selected collection rows now load saved detailed metadata directly into the right-side panel without requiring a second click.
+- Physical copies show edition, included cover/case/disc/manual and each component condition.
+- Digital and OPL copies show saved file format; OPL copies additionally show OPL version, compatibility and VMC status.
+- Optional purchase date, price and seller are surfaced in the same selected-copy summary when present.
+- The detailed inventory / OPL editor remains available for editing, and the right-side summary refreshes immediately after it closes.
+- Existing SQLite tables, copy IDs, USER/ADMIN separation, .NET 8 and the approved light blue-grey design are preserved.
