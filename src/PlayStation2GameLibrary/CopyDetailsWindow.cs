@@ -7,7 +7,7 @@ using Microsoft.Data.Sqlite;
 
 namespace PlayStation2GameLibrary;
 
-/// <summary>Detailed per-copy inventory. Each copy has independent physical, digital and OPL attributes.</summary>
+/// <summary>Detailed per-copy inventory for Physical and Digital collection entries.</summary>
 public sealed class CopyDetailsWindow : Window
 {
     private readonly string _dbPath;
@@ -27,12 +27,13 @@ public sealed class CopyDetailsWindow : Window
         _copyType = copyType;
         Title = "Copy details — PLAYSTATION 2 GAME LIBRARY";
         Width = 790;
-        Height = 740;
+        Height = 720;
         MinWidth = 630;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = Brush("#F3F6FB");
+        Background = Brush("#EEF5FB");
         FontFamily = new FontFamily("Segoe UI");
+
         var root = new DockPanel { Margin = new Thickness(22) };
         Content = root;
         var head = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
@@ -40,17 +41,19 @@ public sealed class CopyDetailsWindow : Window
         root.Children.Add(head);
         head.Children.Add(new TextBlock { Text = "MY COLLECTION  /  COPY DETAILS", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brush("#1261E8") });
         head.Children.Add(new TextBlock { Text = gameTitle, FontSize = 25, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap, Foreground = Brush("#17233A"), Margin = new Thickness(0, 6, 0, 5) });
-        _subtitle.Text = $"{copyType} copy • Each copy of a game can have its own condition, contents and settings.";
+        _subtitle.Text = $"{copyType} copy • Each copy can have its own condition, contents and purchase information.";
         head.Children.Add(_subtitle);
+
         var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
         DockPanel.SetDock(bottom, Dock.Bottom);
         root.Children.Add(bottom);
         var cancel = new Button { Content = "Close", Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(16, 8, 16, 8) };
         cancel.Click += (_, _) => Close();
         bottom.Children.Add(cancel);
-        var save = new Button { Content = "Save copy details", Background = Brush("#1261E8"), Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(16, 8, 16, 8) };
+        var save = new Button { Content = "Save copy details", Background = Brush("#2F82E5"), Foreground = Brushes.White, FontWeight = FontWeights.Bold, Padding = new Thickness(16, 8, 16, 8) };
         save.Click += async (_, _) => await SaveAsync();
         bottom.Children.Add(save);
+
         DockPanel.SetDock(_status, Dock.Bottom);
         root.Children.Add(_status);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -60,31 +63,25 @@ public sealed class CopyDetailsWindow : Window
 
         if (copyType == "Physical")
         {
-            Section(content, "COMPLETE-IN-BOX INVENTORY", "Record what is actually included with this individual copy.");
+            Section(content, "COMPLETENESS", "Record what is actually included with this individual physical copy.");
             Text(content, "Edition", "Edition");
-            Choice(content, "Cover / artwork included", "CoverPresent", Presence);
-            Choice(content, "Case / box included", "CasePresent", Presence);
+            Choice(content, "Cover included", "CoverPresent", Presence);
+            Choice(content, "Original case included", "CasePresent", Presence);
             Choice(content, "Disc included", "DiscPresent", Presence);
-            Choice(content, "Manual / booklet included", "ManualPresent", Presence);
+            Choice(content, "Manual included", "ManualPresent", Presence);
             Section(content, "CONDITION", "Rate each component independently.");
             Choice(content, "Cover condition", "CoverCondition", Grades);
             Choice(content, "Case condition", "CaseCondition", Grades);
             Choice(content, "Disc condition", "DiscCondition", Grades);
             Choice(content, "Manual condition", "ManualCondition", Grades);
         }
-        if (copyType == "Digital" || copyType == "OPL")
+        else if (copyType == "Digital")
         {
-            Section(content, "DIGITAL COPY", "Digital size in GB is edited in the main collection panel.");
+            Section(content, "DIGITAL COPY", "Digital size is edited in the main collection panel.");
             Text(content, "File format (ISO, ZSO, CHD…)", "DigitalFormat");
         }
-        if (copyType == "OPL")
-        {
-            Section(content, "OPEN PS2 LOADER", "Settings and compatibility of this particular copy.");
-            Text(content, "OPL version", "OplVersion");
-            Choice(content, "OPL compatibility", "OplCompatibility", new[] { "Not tested", "Works", "Works with issues", "Not working" });
-            Choice(content, "Virtual Memory Card (VMC)", "VmcStatus", new[] { "Not tested", "Yes", "No", "Not required" });
-        }
-        Section(content, "PURCHASE & STORAGE", "Optional collecting and storage information.");
+
+        Section(content, "PURCHASE & SOURCE", "Optional collecting information.");
         Text(content, "Purchase date (YYYY-MM-DD)", "PurchaseDate");
         Text(content, "Purchase price (include currency)", "PurchasePrice");
         Text(content, "Seller / source", "Seller");
@@ -92,6 +89,7 @@ public sealed class CopyDetailsWindow : Window
     }
 
     private static Brush Brush(string color) => (Brush)new BrushConverter().ConvertFromString(color)!;
+
     private static void Section(Panel root, string title, string description)
     {
         var box = new StackPanel { Margin = new Thickness(0, 12, 0, 8) };
@@ -99,6 +97,7 @@ public sealed class CopyDetailsWindow : Window
         box.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brush("#1261E8") });
         box.Children.Add(new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Foreground = Brush("#70809A"), Margin = new Thickness(0, 3, 0, 0) });
     }
+
     private void Text(Panel root, string label, string key)
     {
         root.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 9, 0, 4) });
@@ -106,6 +105,7 @@ public sealed class CopyDetailsWindow : Window
         root.Children.Add(control);
         _fields[key] = control;
     }
+
     private void Choice(Panel root, string label, string key, string[] values)
     {
         root.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 9, 0, 4) });
@@ -113,13 +113,16 @@ public sealed class CopyDetailsWindow : Window
         root.Children.Add(control);
         _fields[key] = control;
     }
+
     private string Value(string key) => _fields[key] is ComboBox box ? box.SelectedItem?.ToString() ?? "" : ((TextBox)_fields[key]).Text.Trim();
+
     private void SetValue(string key, string value)
     {
         if (!_fields.TryGetValue(key, out var control)) return;
         if (control is TextBox text) text.Text = value;
         else if (control is ComboBox combo && combo.Items.Contains(value)) combo.SelectedItem = value;
     }
+
     private async System.Threading.Tasks.Task LoadAsync()
     {
         try
@@ -138,15 +141,21 @@ public sealed class CopyDetailsWindow : Window
             }
             _status.Text = "Saved copy details loaded.";
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Load copy details failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Load copy details failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
+
     private async System.Threading.Tasks.Task SaveAsync()
     {
         var date = _fields.ContainsKey("PurchaseDate") ? Value("PurchaseDate") : "";
-        if (date.Length > 0 && (!DateTime.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _)))
+        if (date.Length > 0 && !DateTime.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
         {
-            MessageBox.Show(this, "Use YYYY-MM-DD for the purchase date.", "Invalid date"); return;
+            MessageBox.Show(this, "Use YYYY-MM-DD for the purchase date.", "Invalid date");
+            return;
         }
+
         try
         {
             await using var db = new SqliteConnection($"Data Source={_dbPath}");
@@ -156,15 +165,14 @@ public sealed class CopyDetailsWindow : Window
                 "CoverCondition", "CaseCondition", "DiscCondition", "ManualCondition", "DigitalFormat",
                 "OplVersion", "OplCompatibility", "VmcStatus", "PurchaseDate", "PurchasePrice", "Seller" };
             var defaults = new Dictionary<string, string> { ["Edition"] = "Standard" };
-            var values = new Dictionary<string, string>();
             foreach (var key in columns)
             {
-                values[key] = _fields.ContainsKey(key) ? Value(key) :
+                var value = _fields.ContainsKey(key) ? Value(key) :
                     key.EndsWith("Present") ? "Unknown" :
                     key.EndsWith("Condition") ? "Not rated" :
                     key is "OplCompatibility" or "VmcStatus" ? "Not tested" :
                     defaults.GetValueOrDefault(key, "");
-                cmd.Parameters.AddWithValue("$" + key, values[key]);
+                cmd.Parameters.AddWithValue("$" + key, value);
             }
             cmd.Parameters.AddWithValue("$id", _copyId);
             cmd.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O"));
@@ -182,6 +190,9 @@ Seller=excluded.Seller,UpdatedUtc=excluded.UpdatedUtc";
             _status.Text = "Copy details saved successfully.";
             DialogResult = true;
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Save copy details failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Save copy details failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }
