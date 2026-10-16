@@ -1,0 +1,27 @@
+name: Temporary PS2 static source export
+on:
+  push:
+    branches: [tmp-static-ps2-excel-20261016]
+permissions:
+  contents: read
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch public PS2 datasets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p source-data
+          curl -fL --retry 3 --retry-delay 2 'https://fkweb.com.br/site/ps2/dados/ps2-jogos.csv' -o source-data/ps2-jogos.csv
+          curl -fL --retry 3 --retry-delay 2 'https://fkweb.com.br/site/ps2/dados/ps2-discos-completo.json' -o source-data/ps2-discos-completo.json
+          curl -fL --retry 3 --retry-delay 2 'https://github.com/niemasd/GameDB-PS2/releases/latest/download/PS2.data.tsv' -o source-data/PS2.data.tsv
+          curl -fL --retry 3 --retry-delay 2 'https://raw.githubusercontent.com/yingw/redump-local-names/main/Sony%20-%20PlayStation%202%20-%20Datfile%20%2811745%29%20%282026-02-15%2019-36-23%29%20%28Local%20Name%29.csv' -o source-data/redump-local-names-ps2.csv
+          ls -lh source-data
+      - name: Upload source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS2_STATIC_SOURCE_DATA
+          path: source-data/
+          if-no-files-found: error
+          retention-days: 1
