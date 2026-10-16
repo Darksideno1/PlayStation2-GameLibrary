@@ -46,7 +46,7 @@
         </Border>
 
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="238"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Border Grid.Column="0" Background="#F8FBFE" BorderBrush="#D5E2EE" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Bottom" Margin="18,0,18,20">
@@ -72,22 +72,23 @@
                 </StackPanel>
 
                 <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="400"/></Grid.ColumnDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="360"/></Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Background="White" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="16" Padding="16">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Top">
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/><ColumnDefinition Width="155"/><ColumnDefinition Width="150"/><ColumnDefinition Width="145"/><ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBox x:Name="SearchBox" Grid.Column="0" Height="38" Padding="10,7" FontSize="12" TextChanged="SearchBox_TextChanged" ToolTip="Search title, publisher, developer or disc serial"/>
-                                    <ComboBox x:Name="RegionFilter" Grid.Column="1" Margin="8,0,0,0" Height="38" SelectionChanged="RegionFilter_SelectionChanged">
+                                    <Button Content="Clear" Grid.Column="1" Margin="8,0,0,0" Click="ClearFilters_Click"/>
+                                </Grid>
+                                <UniformGrid Columns="3" Margin="0,0,0,7">
+                                    <ComboBox x:Name="RegionFilter" Height="36" Margin="0,0,6,0" SelectionChanged="RegionFilter_SelectionChanged">
                                         <ComboBoxItem Content="All regions" IsSelected="True"/>
                                         <ComboBoxItem Content="PAL"/>
                                         <ComboBoxItem Content="NTSC-U/C"/>
                                         <ComboBoxItem Content="NTSC-J"/>
                                     </ComboBox>
-                                    <ComboBox x:Name="LanguageFilter" Grid.Column="2" Margin="8,0,0,0" Height="38" SelectionChanged="LanguageFilter_SelectionChanged">
+                                    <ComboBox x:Name="LanguageFilter" Height="36" Margin="3,0" SelectionChanged="LanguageFilter_SelectionChanged">
                                         <ComboBoxItem Content="All languages" Tag="" IsSelected="True"/>
                                         <ComboBoxItem Content="English" Tag="en"/>
                                         <ComboBoxItem Content="French" Tag="fr"/>
@@ -96,30 +97,30 @@
                                         <ComboBoxItem Content="Spanish" Tag="es"/>
                                         <ComboBoxItem Content="Japanese" Tag="ja"/>
                                     </ComboBox>
-                                    <ComboBox x:Name="ReleaseTypeFilter" Grid.Column="3" Margin="8,0,0,0" Height="38" SelectionChanged="ReleaseTypeFilter_SelectionChanged">
+                                    <ComboBox x:Name="ReleaseTypeFilter" Height="36" Margin="6,0,0,0" SelectionChanged="ReleaseTypeFilter_SelectionChanged">
                                         <ComboBoxItem Content="All release types" IsSelected="True"/>
                                         <ComboBoxItem Content="Retail"/>
                                         <ComboBoxItem Content="Platinum"/>
                                     </ComboBox>
-                                    <Button Content="Clear" Grid.Column="4" Margin="8,0,0,0" Click="ClearFilters_Click"/>
-                                </Grid>
+                                </UniformGrid>
                                 <TextBlock x:Name="ResultCountText" Text="0 games" Foreground="#63778F" FontSize="11" Margin="2,0,0,9"/>
                             </StackPanel>
 
                             <DataGrid x:Name="GamesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                                       HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" RowHeight="42"
-                                      SelectionChanged="GamesGrid_SelectionChanged" MouseDoubleClick="GamesGrid_MouseDoubleClick" Background="White">
+                                      SelectionChanged="GamesGrid_SelectionChanged" MouseDoubleClick="GamesGrid_MouseDoubleClick" Background="White"
+                                      HorizontalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding PrimarySerial}" Width="115"/>
-                                    <DataGridTextColumn Header="TITLE" Binding="{Binding Title}" Width="2.2*"/>
-                                    <DataGridTemplateColumn Header="REGION" Width="120">
+                                    <DataGridTextColumn Header="ID" Binding="{Binding PrimarySerial}" Width="110" MinWidth="100"/>
+                                    <DataGridTextColumn Header="TITLE" Binding="{Binding Title}" Width="240" MinWidth="180"/>
+                                    <DataGridTemplateColumn Header="REGION" Width="110" MinWidth="95">
                                         <DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="{Binding RegionFlag}" Width="24" Height="16" Stretch="Fill" Margin="0,0,6,0"/><TextBlock Text="{Binding Region}" VerticalAlignment="Center"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Header="LANGUAGES" Width="160">
+                                    <DataGridTemplateColumn Header="LANGUAGES" Width="150" MinWidth="120">
                                         <DataGridTemplateColumn.CellTemplate><DataTemplate><ItemsControl ItemsSource="{Binding LanguageFlags}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Image Source="{Binding}" Width="22" Height="15" Stretch="Fill" Margin="0,0,5,0"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></DataTemplate></DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTextColumn Header="RELEASE" Binding="{Binding ReleaseType}" Width="85"/>
-                                    <DataGridTextColumn Header="OWNED" Binding="{Binding Owned}" Width="90"/>
+                                    <DataGridTextColumn Header="RELEASE" Binding="{Binding ReleaseType}" Width="80" MinWidth="70"/>
+                                    <DataGridTextColumn Header="OWNED" Binding="{Binding Owned}" Width="80" MinWidth="70"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -134,7 +135,7 @@
                             </StackPanel>
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
-                                    <Border Height="350" Background="#F4F7FA" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="10" Padding="8">
+                                    <Border Height="325" Background="#F4F7FA" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="10" Padding="8">
                                         <Grid>
                                             <Image x:Name="SelectedGameCoverImage" Stretch="Uniform" Visibility="Collapsed"/>
                                             <StackPanel x:Name="NoCoverPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -145,7 +146,7 @@
                                     </Border>
                                     <TextBlock x:Name="SelectedGameTitleText" Text="Select a game" FontSize="22" FontWeight="Bold" Foreground="#10243F" TextWrapping="Wrap" Margin="0,14,0,10"/>
                                     <Grid>
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                         <TextBlock Grid.Row="0" Style="{StaticResource MetaLabel}" Text="Primary serial:"/><TextBlock x:Name="SelectedGamePrimarySerialText" Grid.Row="0" Grid.Column="1" Style="{StaticResource MetaValue}" Text="—"/>
                                         <TextBlock Grid.Row="1" Style="{StaticResource MetaLabel}" Text="Region:"/><StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal"><Image x:Name="SelectedRegionFlag" Width="26" Height="17" Stretch="Fill" Margin="0,4,7,4"/><TextBlock x:Name="SelectedGameRegionText" Style="{StaticResource MetaValue}" Text="—"/></StackPanel>
