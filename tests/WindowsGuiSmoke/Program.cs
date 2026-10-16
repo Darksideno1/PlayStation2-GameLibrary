@@ -43,6 +43,21 @@ var staThread = new System.Threading.Thread(() =>
                 grid.SelectedIndex = 0;
                 var selected = grid.SelectedItem;
                 if (selected is null) throw new Exception("Cannot select catalogue game.");
+
+                // Open the selected game's real Game Details action and verify that it stays in the main window.
+                var detailsButton = FindVisualChildren<Button>(window).First(x => string.Equals((string?)x.Content, "Open Game Details", StringComparison.OrdinalIgnoreCase));
+                detailsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.UpdateLayout();
+                var pageTitle = (TextBlock)window.FindName("PageTitle");
+                if (!string.Equals(pageTitle.Text, "Game Details", StringComparison.Ordinal))
+                    throw new Exception($"Open Game Details did not navigate inside the main window. Current page: {pageTitle.Text}");
+                var backButton = FindVisualChildren<Button>(window).FirstOrDefault(x => string.Equals((string?)x.Content, "← Back to Catalog", StringComparison.Ordinal));
+                if (backButton is null) throw new Exception("Inline Game Details did not create Back to Catalog navigation.");
+                backButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.UpdateLayout();
+                if (!string.Equals(pageTitle.Text, "Catalog", StringComparison.Ordinal))
+                    throw new Exception("Back to Catalog did not restore the catalogue view.");
+
                 // Use the real catalogue action, not a directly constructed editor.
                 var saved = false;
                 var editorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -81,7 +96,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("Add to Collection did not persist through UI.");
                     completed = true;
-                    Console.WriteLine("PASS: WPF catalogue button opens editor, adds game, My Collection grid shows entry, SQLite record persists.");
+                    Console.WriteLine("PASS: Catalog opens Game Details inline, returns to Catalog, adds a collection copy and persists it to SQLite.");
                 }
                 window.Close();
             }
