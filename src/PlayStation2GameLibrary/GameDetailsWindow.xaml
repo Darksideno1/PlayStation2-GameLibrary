@@ -1,31 +1,69 @@
 <Window x:Class="PlayStation2GameLibrary.GameDetailsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Game details — PLAYSTATION 2 GAME LIBRARY" Width="1050" Height="650"
-        MinWidth="780" MinHeight="480" WindowStartupLocation="CenterOwner"
+        Title="Game Details — PLAYSTATION 2 GAME LIBRARY" Width="1220" Height="760"
+        MinWidth="940" MinHeight="600" WindowStartupLocation="CenterOwner"
         Background="{StaticResource PageBackground}">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock x:Name="GameTitleText" Text="Game title" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap" />
-            <TextBlock x:Name="GameMetadataText" Text="Year · Developer" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,6,0,0" />
+    <Grid Margin="22">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Game Details" FontSize="29" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
+            <TextBlock Text="One conceptual game, with its linked regional releases." FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
         </StackPanel>
-        <TextBlock Grid.Row="1" Text="Regional releases" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8" />
-        <DataGrid x:Name="ReleasesGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Release title" Binding="{Binding Title}" Width="2*" />
-                <DataGridTextColumn Header="Region" Binding="{Binding Region}" Width="110" />
-                <DataGridTextColumn Header="Year" Binding="{Binding Year}" Width="75" />
-                <DataGridTextColumn Header="Serial" Binding="{Binding Serial}" Width="125" />
-                <DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="1.2*" />
-                <DataGridTextColumn Header="Languages" Binding="{Binding Languages}" Width="1.4*" />
-            </DataGrid.Columns>
-        </DataGrid>
-        <TextBlock x:Name="DetailsStatusText" Grid.Row="3" Margin="0,12,0,0" Foreground="{StaticResource TextSecondary}" FontSize="12" Text="Loading regional releases…" />
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="380"/></Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="White" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="16" Padding="18">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock x:Name="GameTitleText" Text="Game title" FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="GameMetadataText" Text="Year · Developer" FontSize="13" Foreground="{StaticResource TextSecondary}" Margin="0,5,0,14"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Primary serial" Foreground="#5C7189" Margin="0,4,10,4"/><TextBlock x:Name="PrimarySerialText" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" Margin="0,4"/>
+                            <TextBlock Grid.Row="1" Text="Region" Foreground="#5C7189" Margin="0,4,10,4"/><StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal"><Image x:Name="PrimaryRegionFlag" Width="26" Height="17" Stretch="Fill" Margin="0,4,7,4"/><TextBlock x:Name="PrimaryRegionText" Margin="0,4"/></StackPanel>
+                            <TextBlock Grid.Row="2" Text="Languages" Foreground="#5C7189" Margin="0,4,10,4"/><StackPanel x:Name="LanguageFlagsPanel" Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,4"/>
+                            <TextBlock Grid.Row="3" Text="Publisher" Foreground="#5C7189" Margin="0,4,10,4"/><TextBlock x:Name="PublisherText" Grid.Row="3" Grid.Column="1" Margin="0,4" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Row="4" Text="Description" Foreground="#5C7189" Margin="0,4,10,4"/><TextBlock x:Name="DescriptionText" Grid.Row="4" Grid.Column="1" Margin="0,4" TextWrapping="Wrap" Foreground="#405972"/>
+                        </Grid>
+
+                        <Separator Margin="0,16,0,14" Background="#D8E6F6"/>
+                        <TextBlock Text="Regions &amp; Releases" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Each row shows which serial belongs to which regional release. All releases share the same conceptual-game front cover." FontSize="11" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <DataGrid x:Name="ReleasesGrid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" MinHeight="250">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="REGION" Width="125"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Image Source="{Binding RegionFlag}" Width="24" Height="16" Stretch="Fill" Margin="0,0,6,0"/><TextBlock Text="{Binding Region}" VerticalAlignment="Center"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                                <DataGridTextColumn Header="SERIAL" Binding="{Binding Serial}" Width="125"/>
+                                <DataGridTextColumn Header="RELEASE" Binding="{Binding Title}" Width="2*"/>
+                                <DataGridTextColumn Header="YEAR" Binding="{Binding Year}" Width="70"/>
+                                <DataGridTextColumn Header="PUBLISHER" Binding="{Binding Publisher}" Width="1.2*"/>
+                                <DataGridTemplateColumn Header="LANGUAGES" Width="150"><DataGridTemplateColumn.CellTemplate><DataTemplate><ItemsControl ItemsSource="{Binding LanguageFlags}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Image Source="{Binding}" Width="22" Height="15" Stretch="Fill" Margin="0,0,5,0"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="1" Margin="16,0,0,0" Background="White" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="16" Padding="18">
+                <StackPanel>
+                    <Border Height="430" Background="#F4F7FA" BorderBrush="#D3E1EE" BorderThickness="1" CornerRadius="10" Padding="8">
+                        <Grid>
+                            <Image x:Name="CoverImage" Stretch="Uniform" Visibility="Collapsed"/>
+                            <StackPanel x:Name="NoCoverPlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="▧" FontSize="44" Foreground="#9FB0C4" HorizontalAlignment="Center"/>
+                                <TextBlock Text="No cover available" FontWeight="SemiBold" Foreground="#60758D" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Margin="0,14,0,0" Padding="12" Background="#EAF5FF" CornerRadius="10">
+                        <TextBlock Text="ONE GAME = ONE FRONT COVER&#x0a;All linked regional releases use this same cover image." Foreground="#355D83" FontSize="11" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBlock x:Name="DetailsStatusText" Grid.Row="2" Margin="0,12,0,0" Foreground="{StaticResource TextSecondary}" FontSize="12" Text="Loading game details…"/>
     </Grid>
 </Window>
