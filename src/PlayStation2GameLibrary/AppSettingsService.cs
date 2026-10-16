@@ -13,16 +13,13 @@ internal static class AppSettingsService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    private static string SettingsDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PlayStation2GameLibrary");
-
-    private static string SettingsPath => Path.Combine(SettingsDirectory, "settings.json");
+    private static string SettingsPath => Path.Combine(AppPaths.ConfigDirectory, "settings.json");
 
     public static AppSettings Load()
     {
         try
         {
+            AppPaths.EnsurePortableFolders();
             if (!File.Exists(SettingsPath)) return new AppSettings();
             return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath), JsonOptions) ?? new AppSettings();
         }
@@ -34,7 +31,7 @@ internal static class AppSettingsService
 
     public static void Save(AppSettings settings)
     {
-        Directory.CreateDirectory(SettingsDirectory);
+        AppPaths.EnsurePortableFolders();
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
     }
 
@@ -42,6 +39,6 @@ internal static class AppSettingsService
     {
         var configured = string.IsNullOrWhiteSpace(settings.MediaLibraryLocation) ? @".\Media" : settings.MediaLibraryLocation.Trim();
         if (Path.IsPathRooted(configured)) return Path.GetFullPath(configured);
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configured));
+        return Path.GetFullPath(Path.Combine(AppPaths.PortableRoot, configured));
     }
 }
