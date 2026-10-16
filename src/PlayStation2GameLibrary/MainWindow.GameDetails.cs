@@ -13,6 +13,8 @@ public partial class MainWindow
     private readonly ObservableCollection<InlineReleaseItem> _inlineReleases = new();
     private bool _catalogReturnHooked;
 
+    internal Task OpenGameDetailsInlineAsync(string gameId) => ShowInlineGameDetailsAsync(gameId);
+
     private async Task ShowInlineGameDetailsAsync(string gameId)
     {
         if (CatalogPage is null) return;
@@ -106,31 +108,31 @@ public partial class MainWindow
 
     private async Task LoadInlineGameDetailsAsync(string gameId, Grid page)
     {
-        var title = FindNamed<TextBlock>(page, "InlineGameTitle")!;
-        var meta = FindNamed<TextBlock>(page, "InlineMetadata")!;
-        var description = FindNamed<TextBlock>(page, "InlineDescription")!;
-        var serialText = FindNamed<TextBlock>(page, "InlinePrimarySerial")!;
-        var regionText = FindNamed<TextBlock>(page, "InlinePrimaryRegion")!;
-        var publisherText = FindNamed<TextBlock>(page, "InlinePublisher")!;
-        var flags = FindNamed<StackPanel>(page, "InlineLanguageFlags")!;
-        var cover = FindNamed<Image>(page, "InlineCoverImage")!;
-        var placeholder = FindNamed<StackPanel>(page, "InlineNoCover")!;
-        var status = FindNamed<TextBlock>(page, "InlineDetailsStatus")!;
-        var add = FindNamed<Button>(page, "InlineAddButton")!;
+        var title = FindNamed<TextBlock>(page, "InlineGameTitle") ?? throw new InvalidOperationException("Game Details title control was not created.");
+        var meta = FindNamed<TextBlock>(page, "InlineMetadata") ?? throw new InvalidOperationException("Game Details metadata control was not created.");
+        var description = FindNamed<TextBlock>(page, "InlineDescription") ?? throw new InvalidOperationException("Game Details description control was not created.");
+        var serialText = FindNamed<TextBlock>(page, "InlinePrimarySerial") ?? throw new InvalidOperationException("Game Details serial control was not created.");
+        var regionText = FindNamed<TextBlock>(page, "InlinePrimaryRegion") ?? throw new InvalidOperationException("Game Details region control was not created.");
+        var publisherText = FindNamed<TextBlock>(page, "InlinePublisher") ?? throw new InvalidOperationException("Game Details publisher control was not created.");
+        var flags = FindNamed<StackPanel>(page, "InlineLanguageFlags") ?? throw new InvalidOperationException("Game Details language controls were not created.");
+        var cover = FindNamed<Image>(page, "InlineCoverImage") ?? throw new InvalidOperationException("Game Details cover control was not created.");
+        var placeholder = FindNamed<StackPanel>(page, "InlineNoCover") ?? throw new InvalidOperationException("Game Details cover placeholder was not created.");
+        var status = FindNamed<TextBlock>(page, "InlineDetailsStatus") ?? throw new InvalidOperationException("Game Details status control was not created.");
+        var add = FindNamed<Button>(page, "InlineAddButton") ?? throw new InvalidOperationException("Game Details collection button was not created.");
         add.Click += (_, _) => { new CollectionWindow(_databasePath, gameId) { Owner = this }.ShowDialog(); _ = RefreshGamesAsync(); _ = RefreshFooterAsync(); _ = RefreshCollectionPageAsync(); };
 
         await using var db = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly"); await db.OpenAsync();
         await using (var cmd = db.CreateCommand())
         {
             cmd.CommandText = "SELECT CanonicalTitle,FirstReleaseYear,COALESCE(Developer,''),COALESCE(Description,'') FROM Game WHERE GameId=$id"; cmd.Parameters.AddWithValue("$id", gameId);
-            await using var reader = await cmd.ExecuteReaderAsync(); if (!await reader.ReadAsync()) { title.Text = "Game not found"; return; }
+            await using var reader = await cmd.ExecuteReaderAsync(); if (!await reader.ReadAsync()) { title.Text = "Game not found"; status.Text = "No game record found."; return; }
             title.Text = reader.GetString(0); meta.Text = $"{(reader.IsDBNull(1) ? "Year unknown" : reader.GetInt32(1).ToString())}  •  {(string.IsNullOrWhiteSpace(reader.GetString(2)) ? "Developer unknown" : reader.GetString(2))}"; description.Text = string.IsNullOrWhiteSpace(reader.GetString(3)) ? "No description available." : reader.GetString(3);
         }
 
         _inlineReleases.Clear();
         await using (var cmd = db.CreateCommand())
         {
-            cmd.CommandText = @"SELECT r.RegionCode,r.ReleaseYear,COALESCE(r.Publisher,'—'),r.ReleaseType,r.IsPrimary,
+            cmd.CommandText = @"SELECT COALESCE(r.RegionCode,'Unknown'),r.ReleaseYear,COALESCE(r.Publisher,'—'),COALESCE(r.ReleaseType,'Retail'),r.IsPrimary,
 COALESCE((SELECT group_concat(d.SerialRaw, ', ') FROM Disc d WHERE d.ReleaseId=r.ReleaseId),'—'),
 COALESCE((SELECT group_concat(DISTINCT rl.LanguageCode) FROM ReleaseLanguage rl WHERE rl.ReleaseId=r.ReleaseId),'')
 FROM Release r WHERE r.GameId=$id ORDER BY r.IsPrimary DESC,
@@ -165,7 +167,27 @@ CASE WHEN r.RegionCode IN ('NorthAmerica','USA','NTSC-U','NTSC-U/C') THEN 0 WHEN
     private static T? FindNamed<T>(DependencyObject root, string name) where T : FrameworkElement
     {
         if (root is T own && own.Name == name) return own;
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) { var found = FindNamed<T>(VisualTreeHelper.GetChild(root, i), name); if (found is not null) return found; }
+
+        foreach (var child in LogicalTreeHelper.GetChildren(root))
+        {
+            if (child is not DependencyObject dependencyChild) continue;
+            var found = FindNamed<T>(dependencyChild, name);
+            if (found is not null) return found;
+        }
+
+        try
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                var found = FindNamed<T>(child, name);
+                if (found is not null) return found;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Some logical-only objects do not expose visual children. Logical traversal above is sufficient for them.
+        }
         return null;
     }
 
