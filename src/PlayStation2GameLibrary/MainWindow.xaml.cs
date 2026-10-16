@@ -40,14 +40,14 @@ public partial class MainWindow : Window
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PlayStation2GameLibrary", "Data");
             Directory.CreateDirectory(dataDir);
             _databasePath = Path.Combine(dataDir, "catalogue.db");
+
             await using var connection = new SqliteConnection($"Data Source={_databasePath}");
             await connection.OpenAsync();
             var schemaPath = Path.Combine(baseDir, "database", "schema.sql");
             if (File.Exists(schemaPath))
             {
-                var sql = await File.ReadAllTextAsync(schemaPath);
                 await using var command = connection.CreateCommand();
-                command.CommandText = sql;
+                command.CommandText = await File.ReadAllTextAsync(schemaPath);
                 await command.ExecuteNonQueryAsync();
             }
             else
@@ -76,7 +76,6 @@ public partial class MainWindow : Window
         var search = SearchBox.Text.Trim();
         var region = (RegionFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All regions";
         var language = (LanguageFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? string.Empty;
-        var languageName = LanguageName(language);
         var releaseType = (ReleaseTypeFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All release types";
         var results = new List<GameListItem>();
 
@@ -91,18 +90,14 @@ SELECT g.GameId, g.CanonicalTitle, g.FirstReleaseYear, g.Developer,
                  ORDER BY pr.IsPrimary DESC,
                           CASE WHEN pr.RegionCode IN ('NorthAmerica','USA','NTSC-U','NTSC-U/C') THEN 0
                                WHEN pr.RegionCode IN ('Europe','PAL','Europe/PAL','Australia') THEN 1 ELSE 2 END,
-                          d.DiscNumber
-                 LIMIT 1), '') AS PrimarySerial,
+                          d.DiscNumber LIMIT 1), '') AS PrimarySerial,
        COALESCE((SELECT pr.RegionCode FROM Release pr WHERE pr.GameId=g.GameId
                  ORDER BY pr.IsPrimary DESC,
                           CASE WHEN pr.RegionCode IN ('NorthAmerica','USA','NTSC-U','NTSC-U/C') THEN 0
-                               WHEN pr.RegionCode IN ('Europe','PAL','Europe/PAL','Australia') THEN 1 ELSE 2 END
-                 LIMIT 1), 'Unknown') AS PrimaryRegion,
-       COALESCE((SELECT pr.ReleaseType FROM Release pr WHERE pr.GameId=g.GameId
-                 ORDER BY pr.IsPrimary DESC LIMIT 1), 'Retail') AS ReleaseType,
+                               WHEN pr.RegionCode IN ('Europe','PAL','Europe/PAL','Australia') THEN 1 ELSE 2 END LIMIT 1), 'Unknown') AS PrimaryRegion,
+       COALESCE((SELECT pr.ReleaseType FROM Release pr WHERE pr.GameId=g.GameId ORDER BY pr.IsPrimary DESC LIMIT 1), 'Retail') AS ReleaseType,
        COALESCE((SELECT group_concat(DISTINCT rl.LanguageCode)
-                 FROM Release r JOIN ReleaseLanguage rl ON rl.ReleaseId=r.ReleaseId
-                 WHERE r.GameId=g.GameId), '') AS Languages,
+                 FROM Release r JOIN ReleaseLanguage rl ON rl.ReleaseId=r.ReleaseId WHERE r.GameId=g.GameId), '') AS Languages,
        (SELECT COUNT(*) FROM CollectionCopy c
          WHERE c.CopyType IN ('Physical','Digital')
            AND (c.GameId=g.GameId OR c.ReleaseId IN (SELECT rr.ReleaseId FROM Release rr WHERE rr.GameId=g.GameId))) AS OwnedCount
@@ -122,13 +117,15 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         command.Parameters.AddWithValue("$pattern", $"%{search}%");
         command.Parameters.AddWithValue("$region", region);
         command.Parameters.AddWithValue("$language", language);
-        command.Parameters.AddWithValue("$languageName", languageName);
+        command.Parameters.AddWithValue("$languageName", LanguageName(language));
         command.Parameters.AddWithValue("$releaseType", releaseType);
 
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
-            var languageCodes = reader.IsDBNull(7) ? Array.Empty<string>() : reader.GetString(7).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var languageCodes = reader.IsDBNull(7)
+                ? Array.Empty<string>()
+                : reader.GetString(7).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             results.Add(new GameListItem
             {
                 GameId = reader.GetString(0),
@@ -139,7 +136,6 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
                 Region = FriendlyRegion(reader.GetString(5)),
                 RegionFlag = FlagIconFactory.ForRegion(reader.GetString(5)),
                 ReleaseType = reader.GetString(6),
-                Languages = string.Join(", ", languageCodes),
                 LanguageFlags = languageCodes.Select(FlagIconFactory.ForLanguage).Where(x => x is not null).Cast<ImageSource>().ToArray(),
                 OwnedCount = reader.GetInt32(8)
             });
@@ -151,21 +147,86 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         DatabaseCountText.Text = $"Catalogue: {results.Count:N0} shown";
         FooterCatalogText.Text = $"{results.Count:N0} shown";
         if (results.Count > 0 && GamesGrid.SelectedItem is null) GamesGrid.SelectedIndex = 0;
+        if (results.Count == 0) ClearSelectedGame();
     }
 
-    private static string LanguageName(string code) => code.ToLowerInvariant() switch
-    {
-        "en" => "English", "fr" => "French", "de" => "German", "it" => "Italian",
-        "es" => "Spanish", "ja" => "Japanese", _ => code
-    };
+    private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => await RefreshGamesAsync();
+    private async void RegionFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
+    private async void LanguageFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
+    private async void ReleaseTypeFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
 
-    private static string FriendlyRegion(string region)
+    private async void ClearFilters_Click(object sender, RoutedEventArgs e)
     {
-        var value = region.ToLowerInvariant();
-        if (value.Contains("north") || value.Contains("usa") || value.Contains("ntsc-u")) return "NTSC-U/C";
-        if (value.Contains("japan") || value.Contains("ntsc-j")) return "NTSC-J";
-        if (value.Contains("europe") || value.Contains("pal") || value.Contains("australia")) return "PAL";
-        return region;
+        SearchBox.Clear();
+        RegionFilter.SelectedIndex = 0;
+        LanguageFilter.SelectedIndex = 0;
+        ReleaseTypeFilter.SelectedIndex = 0;
+        await RefreshGamesAsync();
+    }
+
+    private void GamesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (GamesGrid.SelectedItem is GameListItem selected) UpdateSelectedGame(selected);
+    }
+
+    private void GamesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => GameDetails_Click(sender, e);
+
+    private void GameDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (GamesGrid.SelectedItem is not GameListItem selected) return;
+        new GameDetailsWindow(_databasePath, selected.GameId) { Owner = this }.ShowDialog();
+    }
+
+    private void AddGame_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        var selectedId = (GamesGrid.SelectedItem as GameListItem)?.GameId;
+        new CollectionWindow(_databasePath, selectedId) { Owner = this }.ShowDialog();
+        _ = RefreshFooterAsync();
+        _ = RefreshGamesAsync();
+    }
+
+    private void Catalogue_Click(object sender, RoutedEventArgs e)
+    {
+        PageTitle.Text = "Catalog";
+        PageSubtitle.Text = "Browse and explore PlayStation 2 games.";
+    }
+
+    private void Collection_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        new CollectionWindow(_databasePath) { Owner = this }.ShowDialog();
+        _ = RefreshFooterAsync();
+        _ = RefreshGamesAsync();
+    }
+
+    private void Dashboard_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        new DashboardWindow(_databasePath) { Owner = this }.ShowDialog();
+        _ = RefreshFooterAsync();
+    }
+
+    private void ImportExport_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        new ImportExportWindow(_databasePath) { Owner = this }.ShowDialog();
+        _ = RefreshGamesAsync();
+        _ = RefreshFooterAsync();
+    }
+
+    private void Help_Click(object sender, RoutedEventArgs e) => new HelpWindow { Owner = this }.ShowDialog();
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new SettingsWindow { Owner = this };
+        if (window.ShowDialog() == true)
+        {
+            _settings = AppSettingsService.Load();
+            _mediaLibrary = new MediaLibraryService(_settings);
+            if (GamesGrid.SelectedItem is GameListItem selected) UpdateSelectedGame(selected);
+            StatusText.Text = $"Media Library updated: {_mediaLibrary.MediaRoot}";
+        }
     }
 
     private async void ImportCatalogue_Click(object sender, RoutedEventArgs e)
@@ -207,134 +268,6 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         }
     }
 
-    private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => await RefreshGamesAsync();
-    private async void RegionFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
-    private async void LanguageFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
-    private async void ReleaseTypeFilter_SelectionChanged(object sender, SelectionChangedEventArgs e) { if (IsLoaded) await RefreshGamesAsync(); }
-    private async void ClearFilters_Click(object sender, RoutedEventArgs e)
-    {
-        SearchBox.Clear();
-        RegionFilter.SelectedIndex = 0;
-        LanguageFilter.SelectedIndex = 0;
-        ReleaseTypeFilter.SelectedIndex = 0;
-        await RefreshGamesAsync();
-    }
-
-    private void GameDetails_Click(object sender, RoutedEventArgs e)
-    {
-        if (GamesGrid.SelectedItem is not GameListItem selected) return;
-        new GameDetailsWindow(_databasePath, selected.GameId) { Owner = this }.ShowDialog();
-    }
-
-    private void GamesGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => GameDetails_Click(sender, e);
-    private void Dashboard_Click(object sender, RoutedEventArgs e) => SetPage("Dashboard", "Dashboard implementation is the next WPF migration step.");
-    private void Catalogue_Click(object sender, RoutedEventArgs e) => SetPage("Catalog", "Browse and explore PlayStation 2 games.");
-
-    private void Collection_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_databasePath)) return;
-        new CollectionWindow(_databasePath) { Owner = this }.ShowDialog();
-        _ = RefreshFooterAsync();
-        _ = RefreshGamesAsync();
-    }
-
-    private async void ImportExport_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_databasePath)) return;
-        var choice = MessageBox.Show(this,
-            "Yes: create a complete SQLite backup.\nNo: restore a backup (overwrites current data after confirmation).\nCancel: do nothing.",
-            "Backup / Restore", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-        if (choice == MessageBoxResult.Cancel) return;
-        try
-        {
-            if (choice == MessageBoxResult.Yes)
-            {
-                var save = new SaveFileDialog { Title = "Save database backup", Filter = "SQLite database (*.db)|*.db", FileName = $"PS2-Library-Backup-{DateTime.Now:yyyyMMdd-HHmmss}.db" };
-                if (save.ShowDialog(this) != true) return;
-                if (Path.GetFullPath(save.FileName).Equals(Path.GetFullPath(_databasePath), StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("Choose a different destination from the live database.");
-                await using var source = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly");
-                await using var destination = new SqliteConnection($"Data Source={save.FileName}");
-                await source.OpenAsync();
-                await destination.OpenAsync();
-                source.BackupDatabase(destination);
-                StatusText.Text = $"Backup saved: {save.FileName}";
-            }
-            else
-            {
-                var open = new OpenFileDialog { Title = "Select a PS2 Library database backup", Filter = "SQLite database (*.db)|*.db", CheckFileExists = true };
-                if (open.ShowDialog(this) != true) return;
-                if (Path.GetFullPath(open.FileName).Equals(Path.GetFullPath(_databasePath), StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("The selected file is already the active database.");
-                await using (var check = new SqliteConnection($"Data Source={open.FileName};Mode=ReadOnly"))
-                {
-                    await check.OpenAsync();
-                    await using var command = check.CreateCommand();
-                    command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('Game','Release','CollectionCopy')";
-                    if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 3) throw new InvalidDataException("Not a compatible PS2 Library backup.");
-                    command.CommandText = "PRAGMA quick_check";
-                    if (!string.Equals((await command.ExecuteScalarAsync())?.ToString(), "ok", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("SQLite integrity check failed; restore cancelled.");
-                }
-                if (MessageBox.Show(this, "Restore will overwrite the current catalogue and personal collection. A safety backup will be created first. Continue?", "Confirm restore", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-                var safety = _databasePath + ".before-restore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".db";
-                await using (var current = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly"))
-                await using (var backup = new SqliteConnection($"Data Source={safety}"))
-                {
-                    await current.OpenAsync();
-                    await backup.OpenAsync();
-                    current.BackupDatabase(backup);
-                }
-                await using (var input = new SqliteConnection($"Data Source={open.FileName};Mode=ReadOnly"))
-                await using (var live = new SqliteConnection($"Data Source={_databasePath}"))
-                {
-                    await input.OpenAsync();
-                    await live.OpenAsync();
-                    input.BackupDatabase(live);
-                }
-                await RefreshGamesAsync();
-                StatusText.Text = $"Database restored. Previous database saved as {safety}";
-            }
-            MessageBox.Show(this, StatusText.Text, "Backup / Restore", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Backup / Restore failed", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void Help_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show(this,
-            "Catalog: browse games and regional releases.\nAdd to Collection: record a Physical or Digital copy.\nSettings: choose the local Media Library folder used for front covers.\nImport / Export: back up or restore the SQLite database.",
-            "PlayStation 2 Game Library — Help", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void Settings_Click(object sender, RoutedEventArgs e)
-    {
-        var window = new SettingsWindow { Owner = this };
-        if (window.ShowDialog() == true)
-        {
-            _settings = AppSettingsService.Load();
-            _mediaLibrary = new MediaLibraryService(_settings);
-            if (GamesGrid.SelectedItem is GameListItem selected) UpdateSelectedGame(selected);
-            StatusText.Text = $"Media Library updated: {_mediaLibrary.MediaRoot}";
-        }
-    }
-
-    private void AddGame_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_databasePath)) return;
-        var selectedId = (GamesGrid.SelectedItem as GameListItem)?.GameId;
-        new CollectionWindow(_databasePath, selectedId) { Owner = this }.ShowDialog();
-        _ = RefreshFooterAsync();
-        _ = RefreshGamesAsync();
-    }
-
-    private void GamesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (GamesGrid.SelectedItem is GameListItem selected) UpdateSelectedGame(selected);
-    }
-
     private void UpdateSelectedGame(GameListItem selected)
     {
         SelectedGameTitleText.Text = selected.Title;
@@ -344,11 +277,10 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         SelectedGameReleaseTypeText.Text = selected.ReleaseType;
         SelectedGameOwnedText.Text = selected.Owned;
         SelectedGameInfoText.Text = $"Year: {selected.Year}\nDeveloper: {selected.Developer}";
+
         SelectedLanguageFlagsPanel.Children.Clear();
         foreach (var source in selected.LanguageFlags)
-        {
-            SelectedLanguageFlagsPanel.Children.Add(new System.Windows.Controls.Image { Source = source, Width = 26, Height = 17, Stretch = Stretch.Fill, Margin = new Thickness(0, 0, 6, 0) });
-        }
+            SelectedLanguageFlagsPanel.Children.Add(new Image { Source = source, Width = 26, Height = 17, Stretch = Stretch.Fill, Margin = new Thickness(0, 0, 6, 0) });
         if (selected.LanguageFlags.Count == 0)
             SelectedLanguageFlagsPanel.Children.Add(new TextBlock { Text = "—", Foreground = Brushes.SlateGray });
 
@@ -362,10 +294,19 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
             : $"Selected: {selected.Title}. Cover: {Path.GetFileName(coverPath)}";
     }
 
-    private void SetPage(string title, string subtitle)
+    private void ClearSelectedGame()
     {
-        PageTitle.Text = title;
-        PageSubtitle.Text = subtitle;
+        SelectedGameTitleText.Text = "No games found";
+        SelectedGamePrimarySerialText.Text = "—";
+        SelectedGameRegionText.Text = "—";
+        SelectedGameReleaseTypeText.Text = "—";
+        SelectedGameOwnedText.Text = "—";
+        SelectedGameInfoText.Text = "No games match the current search and filters.";
+        SelectedRegionFlag.Source = null;
+        SelectedLanguageFlagsPanel.Children.Clear();
+        SelectedGameCoverImage.Source = null;
+        SelectedGameCoverImage.Visibility = Visibility.Collapsed;
+        NoCoverPlaceholder.Visibility = Visibility.Visible;
     }
 
     private async Task RefreshFooterAsync()
@@ -395,6 +336,21 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         FooterProgressText.Text = total > 0 ? $"{100.0 * (physical + digital) / total:0.0}%" : "0%";
     }
 
+    private static string LanguageName(string code) => code.ToLowerInvariant() switch
+    {
+        "en" => "English", "fr" => "French", "de" => "German", "it" => "Italian",
+        "es" => "Spanish", "ja" => "Japanese", _ => code
+    };
+
+    private static string FriendlyRegion(string region)
+    {
+        var value = region.ToLowerInvariant();
+        if (value.Contains("north") || value.Contains("usa") || value.Contains("ntsc-u")) return "NTSC-U/C";
+        if (value.Contains("japan") || value.Contains("ntsc-j")) return "NTSC-J";
+        if (value.Contains("europe") || value.Contains("pal") || value.Contains("australia")) return "PAL";
+        return region;
+    }
+
     private static string FormatBytes(long bytes)
     {
         if (bytes >= 1_000_000_000_000L) return $"{bytes / 1_000_000_000_000.0:0.##} TB";
@@ -410,7 +366,6 @@ ORDER BY g.SortTitle COLLATE NOCASE LIMIT 2000;";
         public string PrimarySerial { get; init; } = string.Empty;
         public string Region { get; init; } = string.Empty;
         public ImageSource? RegionFlag { get; init; }
-        public string Languages { get; init; } = string.Empty;
         public IReadOnlyList<ImageSource> LanguageFlags { get; init; } = Array.Empty<ImageSource>();
         public string ReleaseType { get; init; } = string.Empty;
         public int OwnedCount { get; init; }
