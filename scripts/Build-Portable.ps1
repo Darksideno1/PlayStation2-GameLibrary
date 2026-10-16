@@ -28,15 +28,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Python interpreter could not run.' }
 Push-Location $ProjectRoot
 try {
     & $pythonCommand @pythonPrefixArgs -m unittest discover -s tests -v
-    $testExitCode = $LASTEXITCODE
-    if ($testExitCode -ne 0) { exit $testExitCode }
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & $pythonCommand @pythonPrefixArgs tests/validate_static.py
-    $staticExitCode = $LASTEXITCODE
-    if ($staticExitCode -ne 0) { exit $staticExitCode }
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & $dotnetCommand.Source run --project tests/WindowsSmoke/WindowsSmoke.csproj --configuration Release
     if ($LASTEXITCODE -ne 0) { throw 'Catalogue → Add to Collection → reopen persistence smoke test failed.' }
     & $dotnetCommand.Source run --project tests/WindowsGuiSmoke/WindowsGuiSmoke.csproj --configuration Release
     if ($LASTEXITCODE -ne 0) { throw 'Windows WPF Catalog -> Add to Collection UI smoke test failed.' }
+
     if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
     foreach ($role in @('USER','ADMIN')) {
         $output = Join-Path $Stage $role
@@ -51,6 +50,12 @@ try {
         New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
         Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
+
+    foreach ($folder in @('Data','Config','Media','Media/Covers')) { New-Item -ItemType Directory -Path (Join-Path $Stage $folder) -Force | Out-Null }
+    'The active portable SQLite database is created here as catalogue.db.' | Set-Content (Join-Path $Stage 'Data/README.txt') -Encoding UTF8
+    'Application settings are stored here as settings.json.' | Set-Content (Join-Path $Stage 'Config/README.txt') -Encoding UTF8
+    'Copy front cover images into Covers. ONE GAME = ONE FRONT COVER.' | Set-Content (Join-Path $Stage 'Media/Covers/README.txt') -Encoding UTF8
+
     foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','README.md')) {
         if (Test-Path $file) { Copy-Item $file $Stage -Force }
     }
@@ -58,15 +63,18 @@ try {
     Copy-Item 'docs/WINDOWS_FIRST_BUILD_AND_TEST.md' $Stage -Force
     @'
 PLAYSTATION 2 GAME LIBRARY v0.1 BETA
-Extract this archive and run USER\PlayStation2GameLibrary.exe or ADMIN\PlayStation2GameLibrary.exe.
-This is a beta package; runtime functionality must still be verified on Windows.
+Extract the entire archive before running it.
+Run USER\PlayStation2GameLibrary.exe for normal use or ADMIN\PlayStation2GameLibrary.exe for catalogue maintenance.
+USER and ADMIN share the package-level Data, Config and Media folders.
+The program no longer reuses the old %LOCALAPPDATA% test database by default.
 '@ | Set-Content (Join-Path $Stage 'START_HERE.txt') -Encoding UTF8
+
     Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $Zip -CompressionLevel Optimal -Force
     Add-Type -AssemblyName System.IO.Compression
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
