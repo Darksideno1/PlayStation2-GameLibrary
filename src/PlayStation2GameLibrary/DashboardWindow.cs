@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using Microsoft.Data.Sqlite;
 
@@ -54,12 +55,12 @@ internal sealed class DashboardWindow : Window
         root.Children.Add(middle);
 
         var coverageCard = Card();
-        Grid.SetColumn(coverageCard, 0);
         middle.Children.Add(coverageCard);
         var coveragePanel = new StackPanel();
         coverageCard.Child = coveragePanel;
         coveragePanel.Children.Add(new TextBlock { Text = "Cover Coverage", FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Brush("#17314D") });
         coveragePanel.Children.Add(new TextBlock { Text = "Based on local front cover files in the configured Media Library.", Foreground = Brush("#70849A"), FontSize = 12, Margin = new Thickness(0, 3, 0, 8) });
+
         var coverageGrid = new Grid();
         coverageGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(290) });
         coverageGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -85,17 +86,30 @@ internal sealed class DashboardWindow : Window
         digitalHead.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
         digitalHead.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         digitalPanel.Children.Add(digitalHead);
-        var drive = new Border { Width = 62, Height = 62, Background = Brush("#E8F3FF"), CornerRadius = new CornerRadius(13), Child = new TextBlock { Text = "▰", FontSize = 29, Foreground = Brush("#287BD3"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
-        digitalHead.Children.Add(drive);
+        digitalHead.Children.Add(new Border
+        {
+            Width = 62,
+            Height = 62,
+            Background = Brush("#E8F3FF"),
+            CornerRadius = new CornerRadius(13),
+            Child = new TextBlock { Text = "▰", FontSize = 29, Foreground = Brush("#287BD3"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+        });
         var digitalText = new StackPanel { Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(digitalText, 1);
         digitalHead.Children.Add(digitalText);
         digitalText.Children.Add(new TextBlock { Text = "Total Digital Size", Foreground = Brush("#506980"), FontSize = 13 });
         _digitalSize.Foreground = Brush("#176AC7");
         digitalText.Children.Add(_digitalSize);
-        digitalPanel.Children.Add(_digitalCount);
         _digitalCount.Margin = new Thickness(0, 15, 0, 0);
-        digitalPanel.Children.Add(new Border { Margin = new Thickness(0, 14, 0, 0), Padding = new Thickness(12), Background = Brush("#EAF5FF"), CornerRadius = new CornerRadius(10), Child = new TextBlock { Text = "Total Digital Size is calculated automatically from saved Digital collection entries.", Foreground = Brush("#355D83"), FontSize = 11, TextWrapping = TextWrapping.Wrap } });
+        digitalPanel.Children.Add(_digitalCount);
+        digitalPanel.Children.Add(new Border
+        {
+            Margin = new Thickness(0, 14, 0, 0),
+            Padding = new Thickness(12),
+            Background = Brush("#EAF5FF"),
+            CornerRadius = new CornerRadius(10),
+            Child = new TextBlock { Text = "Total Digital Size is calculated automatically from saved Digital collection entries.", Foreground = Brush("#355D83"), FontSize = 11, TextWrapping = TextWrapping.Wrap }
+        });
 
         var missingCard = Card();
         root.Children.Add(missingCard);
@@ -106,13 +120,23 @@ internal sealed class DashboardWindow : Window
         missingPanel.Children.Add(missingHead);
         missingHead.Children.Add(new TextBlock { Text = "Games Without Covers", FontSize = 20, FontWeight = FontWeights.SemiBold, Foreground = Brush("#17314D") });
         missingHead.Children.Add(new TextBlock { Text = "A sample of catalog games whose primary serial has no local front cover.", Foreground = Brush("#70849A"), FontSize = 12, Margin = new Thickness(0, 3, 0, 0) });
-        var grid = new DataGrid { ItemsSource = _missing, AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, HeadersVisibility = DataGridHeadersVisibility.Column, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal, BorderThickness = new Thickness(0), Height = 235 };
+        var grid = new DataGrid
+        {
+            ItemsSource = _missing,
+            AutoGenerateColumns = false,
+            IsReadOnly = true,
+            CanUserAddRows = false,
+            HeadersVisibility = DataGridHeadersVisibility.Column,
+            GridLinesVisibility = DataGridGridLinesVisibility.Horizontal,
+            BorderThickness = new Thickness(0),
+            Height = 235
+        };
         grid.Columns.Add(new DataGridTextColumn { Header = "ID", Binding = new System.Windows.Data.Binding("Serial"), Width = 130 });
         grid.Columns.Add(new DataGridTextColumn { Header = "TITLE", Binding = new System.Windows.Data.Binding("Title"), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         grid.Columns.Add(new DataGridTextColumn { Header = "REGION", Binding = new System.Windows.Data.Binding("Region"), Width = 120 });
         missingPanel.Children.Add(grid);
-        root.Children.Add(_status);
         _status.Margin = new Thickness(0, 10, 0, 0);
+        root.Children.Add(_status);
 
         Loaded += async (_, _) => await LoadAsync();
     }
@@ -133,7 +157,8 @@ COALESCE((SELECT d.SerialRaw FROM Release r LEFT JOIN Disc d ON d.ReleaseId=r.Re
 COALESCE((SELECT r.RegionCode FROM Release r WHERE r.GameId=g.GameId ORDER BY r.IsPrimary DESC LIMIT 1),'Unknown')
 FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
                 await using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync()) games.Add(new GameCoverKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), FriendlyRegion(reader.GetString(3))));
+                while (await reader.ReadAsync())
+                    games.Add(new GameCoverKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), FriendlyRegion(reader.GetString(3))));
             }
 
             var coverKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -163,18 +188,16 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
             _ring.CenterPrimary = $"{percent:0.0}%";
             _ring.CenterSecondary = $"{covered:N0} of {games.Count:N0} games";
 
-            long digitalCount;
-            long digitalBytes;
             await using (var cmd = db.CreateCommand())
             {
                 cmd.CommandText = "SELECT COUNT(*),COALESCE(SUM(DigitalSizeBytes),0) FROM CollectionCopy WHERE CopyType='Digital'";
                 await using var reader = await cmd.ExecuteReaderAsync();
                 await reader.ReadAsync();
-                digitalCount = reader.GetInt64(0);
-                digitalBytes = reader.GetInt64(1);
+                var digitalCount = reader.GetInt64(0);
+                var digitalBytes = reader.GetInt64(1);
+                _digitalSize.Text = FormatBytes(digitalBytes);
+                _digitalCount.Text = $"Digital games: {digitalCount:N0}";
             }
-            _digitalSize.Text = FormatBytes(digitalBytes);
-            _digitalCount.Text = $"Digital games: {digitalCount:N0}";
 
             _missing.Clear();
             foreach (var item in games.Where(g => string.IsNullOrWhiteSpace(g.Serial) || !coverKeys.Contains(g.Serial)).Take(12))
@@ -202,8 +225,14 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         card.Child = grid;
-        var icon = new Border { Width = 54, Height = 54, CornerRadius = new CornerRadius(11), Background = Brush(iconBackground), Child = new TextBlock { Text = glyph, Foreground = Brush(iconForeground), FontSize = 24, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
-        grid.Children.Add(icon);
+        grid.Children.Add(new Border
+        {
+            Width = 54,
+            Height = 54,
+            CornerRadius = new CornerRadius(11),
+            Background = Brush(iconBackground),
+            Child = new TextBlock { Text = glyph, Foreground = Brush(iconForeground), FontSize = 24, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+        });
         var stack = new StackPanel { Margin = new Thickness(10, 0, 0, 0) };
         Grid.SetColumn(stack, 1);
         grid.Children.Add(stack);
@@ -215,16 +244,17 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
 
     private static Border LegendRow(string label, TextBlock value)
     {
-        var grid = new Grid { Margin = new Thickness(0, 4) };
+        var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.Children.Add(new TextBlock { Text = label, Foreground = Brush("#455F78") });
         Grid.SetColumn(value, 1);
         grid.Children.Add(value);
-        return new Border { BorderBrush = Brush("#EDF2F7"), BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 7), Child = grid };
+        return new Border { BorderBrush = Brush("#EDF2F7"), BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 7, 0, 7), Child = grid };
     }
 
     private static string FormatBytes(long bytes) => bytes >= 1_000_000_000_000L ? $"{bytes / 1_000_000_000_000d:0.##} TB" : $"{bytes / 1_000_000_000d:0.##} GB";
+
     private static string FriendlyRegion(string region)
     {
         var value = region.ToLowerInvariant();
@@ -243,23 +273,9 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
         private string _centerPrimary = "0%";
         private string _centerSecondary = "0 games";
 
-        public double Percentage
-        {
-            get => _percentage;
-            set { _percentage = Math.Clamp(value, 0, 100); InvalidateVisual(); }
-        }
-
-        public string CenterPrimary
-        {
-            get => _centerPrimary;
-            set { _centerPrimary = value; InvalidateVisual(); }
-        }
-
-        public string CenterSecondary
-        {
-            get => _centerSecondary;
-            set { _centerSecondary = value; InvalidateVisual(); }
-        }
+        public double Percentage { get => _percentage; set { _percentage = Math.Clamp(value, 0, 100); InvalidateVisual(); } }
+        public string CenterPrimary { get => _centerPrimary; set { _centerPrimary = value; InvalidateVisual(); } }
+        public string CenterSecondary { get => _centerSecondary; set { _centerSecondary = value; InvalidateVisual(); } }
 
         protected override void OnRender(DrawingContext dc)
         {
@@ -282,16 +298,16 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
                 var endPoint = PointOnCircle(center, radius, end);
                 var figure = new PathFigure { StartPoint = startPoint, IsClosed = false };
                 figure.Segments.Add(new ArcSegment(endPoint, new Size(radius, radius), 0, Percentage > 50, SweepDirection.Clockwise, true));
-                var geometry = new PathGeometry(new[] { figure });
-                dc.DrawGeometry(null, new Pen(Brush("#2E83E5"), thickness), geometry);
+                dc.DrawGeometry(null, new Pen(Brush("#2E83E5"), thickness), new PathGeometry(new[] { figure }));
             }
 
             var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var family = new FontFamily("Segoe UI");
             var primary = new FormattedText(CenterPrimary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface("Segoe UI", FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 28, Brush("#10243F"), dpi);
+                new Typeface(family, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 28, Brush("#10243F"), dpi);
             dc.DrawText(primary, new Point(center.X - primary.Width / 2, center.Y - primary.Height));
             var secondary = new FormattedText(CenterSecondary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                new Typeface("Segoe UI"), 11, Brush("#60758D"), dpi);
+                new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), 11, Brush("#60758D"), dpi);
             dc.DrawText(secondary, new Point(center.X - secondary.Width / 2, center.Y + 12));
         }
 
