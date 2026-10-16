@@ -57,7 +57,7 @@ var staThread = new System.Threading.Thread(() =>
                         if (gameBox?.SelectedValue is not string) return;
                         if (!saved)
                         {
-                            var saveButton = FindVisualChildren<Button>(copyDialog).First(x => (string?)x.Content == "Add / Save");
+                            var saveButton = FindVisualChildren<Button>(copyDialog).First(x => string.Equals((string?)x.Content, "Add / Save", StringComparison.OrdinalIgnoreCase));
                             saveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                             saved = true;
                             return;
@@ -70,7 +70,7 @@ var staThread = new System.Threading.Thread(() =>
                     catch (Exception ex) { error = ex; editorTimer.Stop(); Application.Current.Windows.OfType<CollectionWindow>().FirstOrDefault()?.Close(); }
                 };
                 editorTimer.Start();
-                var addButton = FindVisualChildren<Button>(window).First(x => (string?)x.Content == "+ ADD TO COLLECTION");
+                var addButton = FindVisualChildren<Button>(window).First(x => string.Equals((string?)x.Content, "+ Add to Collection", StringComparison.OrdinalIgnoreCase));
                 addButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 if (error is null)
                 {
@@ -92,8 +92,6 @@ var staThread = new System.Threading.Thread(() =>
         if (error is not null) throw error;
         if (!completed) throw new Exception("Windows GUI smoke test did not complete.");
         try { Directory.Delete(temp, true); } catch (IOException) { }
-        
-        
     }
     catch (Exception ex) { threadError = ex; }
 });
