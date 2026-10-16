@@ -20,7 +20,28 @@ public partial class GameDetailsWindow : Window
         _databasePath = databasePath;
         _gameId = gameId;
         ReleasesGrid.ItemsSource = _releases;
-        Loaded += async (_, _) => await LoadDetailsAsync();
+        Loaded += async (_, _) =>
+        {
+            if (Owner is MainWindow mainWindow)
+            {
+                await mainWindow.OpenGameDetailsInlineAsync(_gameId);
+                Close();
+                return;
+            }
+            await LoadDetailsAsync();
+        };
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        if (Owner is MainWindow)
+        {
+            Opacity = 0;
+            ShowInTaskbar = false;
+            Width = 1;
+            Height = 1;
+        }
     }
 
     private async Task LoadDetailsAsync()
@@ -58,7 +79,7 @@ public partial class GameDetailsWindow : Window
             _releases.Clear();
             await using var releaseCommand = connection.CreateCommand();
             releaseCommand.CommandText = @"
-SELECT r.ReleaseTitle,r.RegionCode,r.ReleaseYear,r.Publisher,r.ReleaseType,r.IsPrimary,
+SELECT COALESCE(r.ReleaseTitle,''),COALESCE(r.RegionCode,'Unknown'),r.ReleaseYear,COALESCE(r.Publisher,'—'),COALESCE(r.ReleaseType,'Retail'),r.IsPrimary,
        COALESCE((SELECT group_concat(d.SerialRaw, ', ') FROM Disc d WHERE d.ReleaseId=r.ReleaseId), '—') AS Serials,
        COALESCE((SELECT group_concat(DISTINCT rl.LanguageCode) FROM ReleaseLanguage rl WHERE rl.ReleaseId=r.ReleaseId), '') AS Languages
 FROM Release r WHERE r.GameId=$id
@@ -78,7 +99,7 @@ ORDER BY r.IsPrimary DESC,
                     Region = FriendlyRegion(rawRegion),
                     RegionFlag = FlagIconFactory.ForRegion(rawRegion),
                     Year = releaseReader.IsDBNull(2) ? "—" : releaseReader.GetInt32(2).ToString(),
-                    Publisher = releaseReader.IsDBNull(3) ? "—" : releaseReader.GetString(3),
+                    Publisher = releaseReader.GetString(3),
                     ReleaseType = releaseReader.GetString(4),
                     IsPrimary = releaseReader.GetInt32(5) == 1,
                     Serial = releaseReader.GetString(6),
@@ -100,7 +121,7 @@ ORDER BY r.IsPrimary DESC,
                 if (primary.LanguageFlags.Count == 0)
                     LanguageFlagsPanel.Children.Add(new TextBlock { Text = "—", Foreground = Brushes.SlateGray });
 
-                var serial = primary.Serial.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+                var serial = primary.Serial.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? string.Empty;
                 var coverPath = _mediaLibrary.FindCoverForSerial(serial);
                 var cover = _mediaLibrary.LoadImage(coverPath);
                 CoverImage.Source = cover;
@@ -125,13 +146,13 @@ ORDER BY r.IsPrimary DESC,
         }
     }
 
-    private static string FriendlyRegion(string region)
+    private static string FriendlyRegion(string? region)
     {
-        var value = region.ToLowerInvariant();
+        var value = (region ?? string.Empty).ToLowerInvariant();
         if (value.Contains("north") || value.Contains("usa") || value.Contains("ntsc-u")) return "NTSC-U/C";
         if (value.Contains("japan") || value.Contains("ntsc-j")) return "NTSC-J";
         if (value.Contains("europe") || value.Contains("pal") || value.Contains("australia")) return "PAL";
-        return region;
+        return string.IsNullOrWhiteSpace(region) ? "Unknown" : region;
     }
 
     private sealed class ReleaseListItem
