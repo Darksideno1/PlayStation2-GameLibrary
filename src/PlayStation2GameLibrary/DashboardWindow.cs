@@ -14,6 +14,9 @@ internal sealed class DashboardWindow : Window
     private readonly TextBlock _withCover = MetricNumber();
     private readonly TextBlock _withoutCover = MetricNumber();
     private readonly TextBlock _coverage = MetricNumber();
+    private readonly TextBlock _legendWithCover = LegendNumber();
+    private readonly TextBlock _legendWithoutCover = LegendNumber();
+    private readonly TextBlock _legendTotal = LegendNumber();
     private readonly TextBlock _digitalSize = MetricNumber();
     private readonly TextBlock _digitalCount = new() { FontSize = 13, Foreground = Brush("#506980") };
     private readonly CoverageRing _ring = new();
@@ -68,9 +71,9 @@ internal sealed class DashboardWindow : Window
         var legend = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 8, 0) };
         Grid.SetColumn(legend, 1);
         coverageGrid.Children.Add(legend);
-        legend.Children.Add(LegendRow("Games with cover", _withCover));
-        legend.Children.Add(LegendRow("Games without cover", _withoutCover));
-        legend.Children.Add(LegendRow("Total games", new TextBlock { Text = "—", FontWeight = FontWeights.Bold, Tag = "total" }));
+        legend.Children.Add(LegendRow("Games with cover", _legendWithCover));
+        legend.Children.Add(LegendRow("Games without cover", _legendWithoutCover));
+        legend.Children.Add(LegendRow("Total games", _legendTotal));
 
         var digitalCard = Card();
         digitalCard.Margin = new Thickness(14, 0, 0, 0);
@@ -133,15 +136,15 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
                 while (await reader.ReadAsync()) games.Add(new GameCoverKey(reader.GetString(0), reader.GetString(1), reader.GetString(2), FriendlyRegion(reader.GetString(3))));
             }
 
-            HashSet<string> coverKeys = new(StringComparer.OrdinalIgnoreCase);
+            var coverKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var unmatched = 0;
             if (Directory.Exists(_mediaLibrary.CoversDirectory))
             {
                 var known = new HashSet<string>(games.Select(g => g.Serial).Where(s => !string.IsNullOrWhiteSpace(s)), StringComparer.OrdinalIgnoreCase);
                 foreach (var file in Directory.EnumerateFiles(_mediaLibrary.CoversDirectory))
                 {
-                    var ext = Path.GetExtension(file);
-                    if (ext is not (".jpg" or ".jpeg" or ".png" or ".webp") && ext.ToLowerInvariant() is not (".jpg" or ".jpeg" or ".png" or ".webp")) continue;
+                    var extension = Path.GetExtension(file).ToLowerInvariant();
+                    if (extension is not ".jpg" and not ".jpeg" and not ".png" and not ".webp") continue;
                     var key = Path.GetFileNameWithoutExtension(file);
                     if (known.Contains(key)) coverKeys.Add(key); else unmatched++;
                 }
@@ -153,11 +156,12 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
             _withCover.Text = covered.ToString("N0");
             _withoutCover.Text = missing.ToString("N0");
             _coverage.Text = $"{percent:0.0}%";
+            _legendWithCover.Text = $"{covered:N0}  ({percent:0.0}%)";
+            _legendWithoutCover.Text = $"{missing:N0}  ({100d - percent:0.0}%)";
+            _legendTotal.Text = games.Count.ToString("N0");
             _ring.Percentage = percent;
             _ring.CenterPrimary = $"{percent:0.0}%";
             _ring.CenterSecondary = $"{covered:N0} of {games.Count:N0} games";
-
-            foreach (var totalBlock in FindVisualChildren<TextBlock>(this).Where(x => Equals(x.Tag, "total"))) totalBlock.Text = games.Count.ToString("N0");
 
             long digitalCount;
             long digitalBytes;
@@ -186,6 +190,7 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
     }
 
     private static TextBlock MetricNumber() => new() { Text = "—", FontSize = 29, FontWeight = FontWeights.Bold, Foreground = Brush("#10243F") };
+    private static TextBlock LegendNumber() => new() { Text = "—", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Brush("#17314D") };
     private static Brush Brush(string hex) => (Brush)new BrushConverter().ConvertFromString(hex)!;
     private static Border Card() => new() { Background = Brushes.White, BorderBrush = Brush("#D3E1EE"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(15), Padding = new Thickness(18) };
 
@@ -214,7 +219,6 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.Children.Add(new TextBlock { Text = label, Foreground = Brush("#455F78") });
-        value.FontSize = 14;
         Grid.SetColumn(value, 1);
         grid.Children.Add(value);
         return new Border { BorderBrush = Brush("#EDF2F7"), BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(0, 7), Child = grid };
@@ -230,25 +234,32 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
         return region;
     }
 
-    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T t) yield return t;
-            foreach (var descendant in FindVisualChildren<T>(child)) yield return descendant;
-        }
-    }
-
     private sealed record GameCoverKey(string GameId, string Title, string Serial, string Region);
     private sealed record MissingCoverRow(string Serial, string Title, string Region);
 
     private sealed class CoverageRing : FrameworkElement
     {
         private double _percentage;
-        public double Percentage { get => _percentage; set { _percentage = Math.Clamp(value, 0, 100); InvalidateVisual(); } }
-        public string CenterPrimary { get; set; } = "0%";
-        public string CenterSecondary { get; set; } = "0 games";
+        private string _centerPrimary = "0%";
+        private string _centerSecondary = "0 games";
+
+        public double Percentage
+        {
+            get => _percentage;
+            set { _percentage = Math.Clamp(value, 0, 100); InvalidateVisual(); }
+        }
+
+        public string CenterPrimary
+        {
+            get => _centerPrimary;
+            set { _centerPrimary = value; InvalidateVisual(); }
+        }
+
+        public string CenterSecondary
+        {
+            get => _centerSecondary;
+            set { _centerSecondary = value; InvalidateVisual(); }
+        }
 
         protected override void OnRender(DrawingContext dc)
         {
@@ -256,11 +267,16 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
             var size = Math.Min(ActualWidth, ActualHeight);
             var center = new Point(ActualWidth / 2, ActualHeight / 2);
             var radius = Math.Max(10, size / 2 - 22);
-            var thickness = 21d;
+            const double thickness = 21d;
             dc.DrawEllipse(null, new Pen(Brush("#DFE8F0"), thickness), center, radius, radius);
-            if (Percentage > 0.01)
+
+            if (Percentage >= 99.999)
             {
-                var start = -90d;
+                dc.DrawEllipse(null, new Pen(Brush("#2E83E5"), thickness), center, radius, radius);
+            }
+            else if (Percentage > 0.01)
+            {
+                const double start = -90d;
                 var end = start + Percentage * 3.6;
                 var startPoint = PointOnCircle(center, radius, start);
                 var endPoint = PointOnCircle(center, radius, end);
@@ -269,10 +285,13 @@ FROM Game g ORDER BY g.SortTitle COLLATE NOCASE";
                 var geometry = new PathGeometry(new[] { figure });
                 dc.DrawGeometry(null, new Pen(Brush("#2E83E5"), thickness), geometry);
             }
+
             var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            var primary = new FormattedText(CenterPrimary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI", FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 28, Brush("#10243F"), dpi);
+            var primary = new FormattedText(CenterPrimary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface("Segoe UI", FontStyles.Normal, FontWeights.Bold, FontStretches.Normal), 28, Brush("#10243F"), dpi);
             dc.DrawText(primary, new Point(center.X - primary.Width / 2, center.Y - primary.Height));
-            var secondary = new FormattedText(CenterSecondary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), 11, Brush("#60758D"), dpi);
+            var secondary = new FormattedText(CenterSecondary, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface("Segoe UI"), 11, Brush("#60758D"), dpi);
             dc.DrawText(secondary, new Point(center.X - secondary.Width / 2, center.Y + 12));
         }
 
