@@ -51,7 +51,7 @@ try {
         New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
         Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
-    foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','README.md')) {
+    foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','README.md')) {
         if (Test-Path $file) { Copy-Item $file $Stage -Force }
     }
     Copy-Item 'docs/PORTABLE_USER_GUIDE.md' $Stage -Force
@@ -66,7 +66,7 @@ This is a beta package; runtime functionality must still be verified on Windows.
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
