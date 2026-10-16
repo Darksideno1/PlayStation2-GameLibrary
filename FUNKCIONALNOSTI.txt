@@ -1,56 +1,86 @@
 PLAYSTATION 2 GAME LIBRARY v0.1 BETA — DEVELOPMENT STATUS
-Last updated: 2026-10-15
-Current baseline: Windows CI-verified development baseline; portable release artifact is built by GitHub Actions after every successful main-branch build.
+Last updated: 2026-10-16
+Current baseline: approved HTML v11 design is being transferred into the existing WPF/.NET 8 application without replacing the SQLite data layer.
 
-IMPLEMENTED IN SOURCE
-- WPF main-window catalogue shell with search, region filter, catalogue grid and navigation.
-- WPF App.xaml startup declaration and shared UI resources.
-- SQLite schema for conceptual games, regional releases, discs, languages, source provenance, import history, review queue and collection entities.
-- Python reference importer with preview/apply, explicit approval gate, transaction, source snapshots and idempotence tests.
-- C# JSON import service connected to the Import catalogue button, with preview summary, row-level preview export, explicit confirmation and transactional apply path.
-- My Collection with independent Physical, Digital and OPL copies, multiple copies of the same game, digital sizes, notes, filters and totals.
-- Per-copy physical inventory: edition, cover/case/disc/manual presence and independent component condition.
-- Per-copy Digital/OPL metadata: file format, OPL version, compatibility and VMC status.
-- Optional per-copy purchase date, price and seller.
-- Saved per-copy inventory/OPL details are shown directly in the My Collection right-side panel when a row is selected; the separate details window remains the editor.
-- SQLite backup/restore with validation, overwrite confirmation and pre-restore safety backup.
-- Separate USER and ADMIN portable builds.
+LOCKED PRODUCT DIRECTION
+- Windows desktop application: WPF / .NET 8.
+- English user interface.
+- Light blue-gray design with left navigation, central list/content area and right details panel.
+- Separate USER and ADMIN builds.
+- Existing SQLite catalogue/collection data layer retained.
+- USER collection types: Physical and Digital only. Older OPL rows remain non-destructively compatible in the schema/database but are not part of the current USER workflow.
+- Media rule: ONE GAME = ONE FRONT COVER.
+- Front covers are local files, not downloaded automatically from the web.
+- Supported cover formats: JPG, JPEG, PNG and WebP.
+- Media Library root is configurable and may be relative, local, external-disk or NAS based.
 
-VERIFIED BY WINDOWS CI / AUTOMATED SMOKE TESTS
-- Starter catalogue creation and persistence in SQLite.
-- Catalogue -> Add to Collection -> My Collection GUI flow.
-- Collection insert and persistence after database reopen.
-- Two distinct copies of the same game are retained independently.
-- Detailed physical inventory persists after database reopen.
-- Windows portable USER and ADMIN build/package pipeline.
+IMPLEMENTED IN CURRENT FEATURE BRANCH
+- Rebuilt WPF Catalog shell based on the approved v11 HTML prototype.
+- Catalog search plus Region, Language and Release Type filters.
+- Region and language values displayed with graphical flag images.
+- Catalog ownership status for Physical/Digital collection copies.
+- Right-side selected-game panel with large proportional front cover and neutral missing-cover placeholder.
+- Local cover lookup by the conceptual game's selected primary serial from <Media Library>\Covers.
+- Front-cover display preserves aspect ratio; original cover files are never modified.
+- Game Details window with one large front cover and explicit Regions & Releases mapping (region + serial + language flags).
+- My Collection limited to Physical and Digital in current USER workflow, with multiple copies of one game, digital sizes, notes and persistent SQLite storage.
+- Per-copy Physical inventory: Original case, Cover, Disc and Manual presence plus independent condition values.
+- Digital file format plus purchase/source metadata.
+- Dashboard WPF screen with Games with cover, Games without cover, coverage ring, missing-cover list and Total Digital Size.
+- Settings WPF screen with Media Library Location, Browse, Test Path, Open Covers Folder and thumbnail-cache preference.
+- Import / Export WPF screen with complete SQLite backup, validated restore with automatic safety backup, collection JSON/CSV export, import preview and duplicate skipping.
+- Searchable Help WPF screen covering Quick Start, Catalog, My Collection, Front Covers, Backup & Restore, Troubleshooting and About.
+- C# GameDB-PS2 catalogue import preview/apply service remains available in ADMIN build.
+- Separate USER and ADMIN portable builds remain supported.
 
-DATA / IMPORT VERIFICATION
-- Actual local PS2.data.json previously inspected: 13,052 keyed records; 8,514 non-empty release_date values; observed formats YYYY (399), YYYY-MM (49), YYYY-MM-DD (8,066), and 4,538 empty/null values.
-- Python importer unit tests and idempotence checks are retained in the test suite.
-- Bundled starter catalogue uses preferred-region selection rules and is only seeded when the local catalogue is empty.
+MEDIA / COVER BEHAVIOUR
+- Cover filename is based on the conceptual game's primary serial, e.g. SLES-52541.jpg.
+- Linked PAL / NTSC-U/C / NTSC-J releases share the same conceptual-game front cover.
+- No country/language-specific cover variants are managed.
+- Missing or unreachable Media Library paths do not invalidate catalogue data; the UI falls back to No cover available.
+- Dashboard coverage is derived from locally present cover files.
 
 MY COLLECTION — CURRENT STATUS
-- Physical / Digital / OPL: implemented.
-- Multiple copies of the same game: implemented and smoke-tested.
-- Physical cover, case, disc and manual presence/condition: implemented and persisted per copy.
-- Digital size in GB: implemented with live total storage calculation.
-- OPL version, compatibility and VMC status: implemented per copy.
-- Add, edit, delete and persistent SQLite save/reopen: implemented.
-- Selected-copy details without an extra click: implemented; saved inventory/OPL information appears in the right panel.
-- Detailed inventory / OPL settings editor remains available for changing those values.
+- Physical: implemented.
+- Digital: implemented.
+- Multiple copies of the same game: implemented.
+- Original case / Cover / Disc / Manual completeness: implemented and persisted.
+- Independent component condition: implemented and persisted.
+- Digital size in GB: implemented; total digital storage is calculated automatically.
+- Notes, purchase date, price and seller/source: supported.
+- Add, edit, delete and SQLite persistence: implemented.
+- Older OPL database values are retained only for backward compatibility and are excluded from current USER views and totals.
 
-PARTIAL / REQUIRES FURTHER WORK
-- Exact visual parity of all secondary screens with the locked reference still needs manual design refinement.
-- Complete global catalogue selection/enrichment remains to be finalized beyond the bundled starter catalogue.
-- Regional release editing and robust manual duplicate merge/split workflows are not complete.
-- Dashboard/Statistics screen is not complete.
-- Media management (primary image, front/back cover, disc image, manual) is not complete.
-- Advanced ADMIN catalogue editing (languages, regions, flags, descriptions, genres, merge/split) is not complete.
+IMPORT / EXPORT
+- Complete SQLite backup: implemented.
+- Restore compatibility + integrity validation: implemented.
+- Pre-restore safety backup: implemented.
+- Collection JSON export: implemented.
+- Collection CSV export: implemented.
+- Collection JSON/CSV preview import: implemented.
+- Exact duplicate detection/skip: implemented.
+- Unknown-game rejection: implemented.
 
-NEXT DEVELOPMENT ORDER
-1. Dashboard / Statistics using the now-complete collection data model and totals.
-2. Media management and primary-image workflow.
-3. ADMIN catalogue editing and merge/split workflows.
-4. Complete catalogue enrichment/import review and final UI polish.
+VERIFICATION
+- Windows GitHub Actions builds USER and ADMIN portable packages.
+- Existing Windows GUI smoke test verifies Catalog -> Add to Collection -> My Collection -> SQLite persistence.
+- The last fully verified foundation build before the newest Dashboard/Import-Export/Help wiring completed successfully in GitHub Actions.
+- The newest feature-branch build must remain green before merging to main.
 
-Do not replace the current project with legacy source. The archived/old build remains a visual and functional reference only.
+ADMIN — NEXT PHASE
+- Implement dedicated ADMIN navigation and screens directly in WPF using the approved USER visual language.
+- Cover Management: current cover, filename/path, rescan, open Covers folder, games without cover and unmatched images.
+- Catalog Editor: languages, regions/releases, flags, descriptions, developer/publisher/genres.
+- Import review UI: preview, rejected records, duplicate detection and reports.
+- Merge / Split conceptual games and linked releases.
+- ADMIN.exe remains separate from the normal USER distribution.
+
+DO NOT REINTRODUCE
+- Dark/neon UI.
+- Back cover, disc image or manual-scan media management in the first release.
+- Country/language cover variants.
+- Automatic web cover downloading.
+- OPL as a current USER collection type.
+- WebView2 solely to reproduce the old/HTML UI.
+
+The old/archived program remains a reference only. Continue on the existing WPF/.NET 8/SQLite codebase and the approved v11 UX direction.
