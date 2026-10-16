@@ -33,7 +33,7 @@ internal sealed class HelpWindow : Window
         heading.Children.Add(new TextBlock { Text = "Help", FontSize = 30, FontWeight = FontWeights.Bold, Foreground = Brush("#10243F") });
         heading.Children.Add(new TextBlock { Text = "Quick guidance for using PLAYSTATION 2 GAME LIBRARY.", Foreground = Brush("#60758D"), Margin = new Thickness(0, 5, 0, 0) });
 
-        var searchBorder = new Border { GridRow = 1, Background = Brushes.White, BorderBrush = Brush("#C3D5E6"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(4), Margin = new Thickness(0, 0, 0, 14) };
+        var searchBorder = new Border { Background = Brushes.White, BorderBrush = Brush("#C3D5E6"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Padding = new Thickness(4), Margin = new Thickness(0, 0, 0, 14) };
         Grid.SetRow(searchBorder, 1);
         root.Children.Add(searchBorder);
         _search.BorderThickness = new Thickness(0);
