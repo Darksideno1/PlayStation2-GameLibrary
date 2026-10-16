@@ -1,0 +1,123 @@
+PLAYSTATION 2 GAME LIBRARY v0.1 BETA — WINDOWS TEST CHECKLIST
+Updated: 2026-10-16
+
+A. STARTUP / PORTABLE PACKAGE
+[ ] Extract the portable ZIP to a normal writable folder.
+[ ] USER\PlayStation2GameLibrary.exe starts without installation.
+[ ] ADMIN\PlayStation2GameLibrary.exe starts the separate ADMIN shell.
+[ ] Existing user database is preserved after replacing application files.
+[ ] Version displayed is v0.1 BETA.
+
+B. USER — CATALOG
+[ ] Catalog opens with light blue-gray layout, left navigation, game list and right details panel.
+[ ] Search by title works.
+[ ] Search by disc serial works.
+[ ] Region filter works for PAL / NTSC-U/C / NTSC-J.
+[ ] Language filter works and flags render correctly.
+[ ] Release Type filter works.
+[ ] Selecting a game updates the right panel.
+[ ] Region and language flags display as graphical images.
+[ ] Owned count updates after adding/removing collection copies.
+[ ] Double-click / Open Game Details opens the selected game.
+
+C. FRONT COVER MEDIA
+[ ] Settings accepts a relative Media Library path (e.g. .\Media\).
+[ ] Settings accepts an absolute local path (e.g. D:\PS2 Media\).
+[ ] Settings accepts a reachable UNC/NAS path.
+[ ] Test Path reports Covers folder availability.
+[ ] JPG front cover loads by primary serial.
+[ ] JPEG front cover loads by primary serial.
+[ ] PNG front cover loads by primary serial.
+[ ] WebP front cover loads by primary serial.
+[ ] Cover preserves aspect ratio and remains centered.
+[ ] Missing cover displays No cover available without crashing.
+[ ] Unreachable NAS does not prevent catalog/collection use.
+[ ] Original image files are not modified.
+
+D. GAME DETAILS
+[ ] Large front cover is displayed once for the conceptual game.
+[ ] Primary serial is shown.
+[ ] Regions & Releases table shows region -> serial mapping.
+[ ] PAL, NTSC-U/C and NTSC-J flags render correctly when present.
+[ ] Language flags render correctly.
+[ ] Multiple regional releases share the same conceptual-game cover.
+
+E. MY COLLECTION — PHYSICAL
+[ ] Add to Collection opens with selected catalog game.
+[ ] Add Physical copy works.
+[ ] Multiple Physical copies of the same game remain separate.
+[ ] Edit existing Physical copy works.
+[ ] Delete selected copy asks for confirmation.
+[ ] Original case presence saves and reloads.
+[ ] Cover presence saves and reloads.
+[ ] Disc presence saves and reloads.
+[ ] Manual presence saves and reloads.
+[ ] Independent component conditions save and reload.
+[ ] Purchase date, price and seller/source save and reload.
+[ ] Notes save and reload.
+
+F. MY COLLECTION — DIGITAL
+[ ] Add Digital copy works.
+[ ] Digital size accepts valid GB values.
+[ ] Invalid/negative digital sizes are rejected.
+[ ] Digital file format saves and reloads.
+[ ] Total Digital Size updates after save/delete.
+[ ] OPL is not offered as a current USER collection type.
+
+G. DASHBOARD
+[ ] Games with cover count matches local Media Library scan.
+[ ] Games without cover count is correct.
+[ ] Coverage percentage and ring are consistent.
+[ ] Total games is correct.
+[ ] Total Digital Size matches saved Digital entries.
+[ ] Missing-cover sample list loads.
+[ ] Unmatched cover count is reported.
+
+H. IMPORT / EXPORT
+[ ] Create Backup produces a valid SQLite backup.
+[ ] Backup does not copy cover image files.
+[ ] Restore rejects an incompatible database.
+[ ] Restore runs SQLite integrity check.
+[ ] Restore requires confirmation.
+[ ] Restore creates a safety backup before overwrite.
+[ ] JSON collection export opens and contains only Physical/Digital entries.
+[ ] CSV collection export opens in a spreadsheet application.
+[ ] JSON collection import preview reports adds/duplicates/rejections.
+[ ] CSV collection import preview reports adds/duplicates/rejections.
+[ ] Exact duplicate imports are skipped.
+[ ] Unknown games are rejected instead of creating invalid collection rows.
+
+I. HELP
+[ ] Help opens from left navigation.
+[ ] Topic navigation works.
+[ ] Help search selects a matching topic.
+[ ] Quick Start / Catalog / My Collection / Front Covers / Backup & Restore / Troubleshooting / About are present.
+
+J. ADMIN
+[ ] ADMIN executable opens the ADMIN shell, not USER My Collection workflow.
+[ ] Cover Management lists games and primary serials.
+[ ] Cover status Found / Missing is correct.
+[ ] Search and status filter work.
+[ ] Selected cover preview loads.
+[ ] Open Covers Folder works.
+[ ] Refresh Media Library works.
+[ ] Unmatched Images list shows files that cannot be mapped to known primary serials.
+[ ] ADMIN GameDB JSON import preview runs before apply.
+[ ] Catalog Editor and Merge/Split remain clearly marked as the next ADMIN implementation phase if not yet completed.
+
+K. REGRESSION / DATA SAFETY
+[ ] Existing SQLite Game / Release / Disc / language data is preserved.
+[ ] Existing CollectionCopy IDs are preserved after normal startup.
+[ ] Older OPL database rows are not deleted automatically.
+[ ] USER totals ignore legacy OPL rows.
+[ ] Backup / restore is idempotent for unchanged data.
+[ ] Program can reopen after Windows restart and collection data remains saved.
+
+AUTOMATED RELEASE GATES
+[ ] Python importer tests pass.
+[ ] Static source validation passes.
+[ ] Windows SQLite smoke test passes.
+[ ] Windows WPF GUI smoke test passes.
+[ ] USER portable publish succeeds.
+[ ] ADMIN portable publish succeeds.
+[ ] Portable ZIP contains both EXEs, schema, seed data, FUNKCIONALNOSTI.txt and this TEST_CHECKLIST.txt.
