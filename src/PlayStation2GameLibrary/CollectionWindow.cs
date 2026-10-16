@@ -11,7 +11,7 @@ using Microsoft.Data.Sqlite;
 
 namespace PlayStation2GameLibrary;
 
-/// <summary>Manage owned physical, digital and OPL copies without editing catalogue records.</summary>
+/// <summary>Manage owned physical and digital copies without editing catalogue records.</summary>
 public sealed class CollectionWindow : Window
 {
     private readonly string _dbPath;
@@ -19,7 +19,7 @@ public sealed class CollectionWindow : Window
     private readonly ObservableCollection<CopyRow> _rows = new();
     private readonly DataGrid _grid = new() { IsReadOnly = true, AutoGenerateColumns = false, Margin = new Thickness(0, 12, 0, 12) };
     private readonly ComboBox _game = new() { DisplayMemberPath = "Title", SelectedValuePath = "Id", MinWidth = 270 };
-    private readonly ComboBox _type = new() { ItemsSource = new[] { "Physical", "Digital", "OPL" }, SelectedIndex = 0, Width = 110 };
+    private readonly ComboBox _type = new() { ItemsSource = new[] { "Physical", "Digital" }, SelectedIndex = 0, Width = 110 };
     private readonly TextBox _size = new() { Width = 85, ToolTip = "Digital size in GB (optional)" };
     private readonly TextBox _notes = new() { Width = 190, ToolTip = "Optional notes" };
     private readonly TextBlock _summary = new() { Margin = new Thickness(0, 8, 0, 0) };
@@ -32,7 +32,6 @@ public sealed class CollectionWindow : Window
     private readonly TextBlock _total = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private readonly TextBlock _physical = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private readonly TextBlock _digital = new() { FontSize = 22, FontWeight = FontWeights.Bold };
-    private readonly TextBlock _opl = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private readonly TextBlock _storage = new() { FontSize = 22, FontWeight = FontWeights.Bold };
     private ICollectionView? _view;
 
@@ -41,35 +40,36 @@ public sealed class CollectionWindow : Window
         _dbPath = databasePath;
         _initialGameId = initialGameId;
         Title = "My Collection — PLAYSTATION 2 GAME LIBRARY";
-        Width = 1100;
-        Height = 680;
-        MinWidth = 820;
-        MinHeight = 490;
+        Width = 1180;
+        Height = 720;
+        MinWidth = 900;
+        MinHeight = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = Brush("#F3F6FB");
+        Background = Brush("#EEF5FB");
         FontFamily = new FontFamily("Segoe UI");
+
         var root = new DockPanel { Margin = new Thickness(24) };
         Content = root;
         var header = new StackPanel();
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
-        header.Children.Add(new TextBlock { Text = "MY LIBRARY  /  COLLECTION", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brush("#1261E8") });
-        header.Children.Add(new TextBlock { Text = "My Collection", FontSize = 29, FontWeight = FontWeights.Bold, Foreground = Brush("#17233A"), Margin = new Thickness(0, 6, 0, 3) });
-        header.Children.Add(new TextBlock { Text = "Your physical games, digital copies and OPL library in one place.", Foreground = Brush("#70809A"), Margin = new Thickness(0, 0, 0, 18) });
-        var metrics = new UniformGrid { Columns = 5, Margin = new Thickness(0, 0, 0, 17) };
+        header.Children.Add(new TextBlock { Text = "My Collection", FontSize = 29, FontWeight = FontWeights.Bold, Foreground = Brush("#17233A") });
+        header.Children.Add(new TextBlock { Text = "Your Physical and Digital PlayStation 2 collection.", Foreground = Brush("#70809A"), Margin = new Thickness(0, 5, 0, 18) });
+
+        var metrics = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 17) };
         header.Children.Add(metrics);
         Metric(metrics, "TOTAL COPIES", _total);
         Metric(metrics, "PHYSICAL", _physical);
         Metric(metrics, "DIGITAL", _digital);
-        Metric(metrics, "OPL", _opl);
-        Metric(metrics, "DIGITAL STORAGE (GB)", _storage);
+        Metric(metrics, "TOTAL DIGITAL SIZE", _storage);
+
         var filters = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
         header.Children.Add(filters);
-        var newButton = new Button { Content = "+ New copy", Background = Brush("#1261E8"), Foreground = Brushes.White, FontWeight = FontWeights.SemiBold, Padding = new Thickness(16, 8, 16, 8) };
+        var newButton = new Button { Content = "+ New copy", Background = Brush("#2F82E5"), Foreground = Brushes.White, FontWeight = FontWeights.SemiBold, Padding = new Thickness(16, 8, 16, 8) };
         newButton.Click += (_, _) => ClearEditor();
         DockPanel.SetDock(newButton, Dock.Right);
         filters.Children.Add(newButton);
-        _filter.ItemsSource = new[] { "All copies", "Physical", "Digital", "OPL" };
+        _filter.ItemsSource = new[] { "All copies", "Physical", "Digital" };
         _filter.SelectedIndex = 0;
         _filter.Margin = new Thickness(0, 0, 10, 0);
         DockPanel.SetDock(_filter, Dock.Right);
@@ -77,10 +77,12 @@ public sealed class CollectionWindow : Window
         _search.ToolTip = "Search your collection by title or notes";
         _search.Margin = new Thickness(0, 0, 12, 0);
         filters.Children.Add(_search);
+
         var layout = new Grid();
         layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2.2, GridUnitType.Star) });
-        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(340) });
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(380) });
         root.Children.Add(layout);
+
         var listCard = Card();
         Grid.SetColumn(listCard, 0);
         layout.Children.Add(listCard);
@@ -92,7 +94,7 @@ public sealed class CollectionWindow : Window
         _grid.RowHeight = 39;
         _grid.BorderThickness = new Thickness(0);
         _grid.Columns.Add(new DataGridTextColumn { Header = "GAME TITLE", Binding = new Binding("Title"), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
-        _grid.Columns.Add(new DataGridTextColumn { Header = "FORMAT", Binding = new Binding("CopyType"), Width = 90 });
+        _grid.Columns.Add(new DataGridTextColumn { Header = "TYPE", Binding = new Binding("CopyType"), Width = 90 });
         _grid.Columns.Add(new DataGridTextColumn { Header = "SIZE (GB)", Binding = new Binding("SizeDisplay"), Width = 105 });
         _grid.Columns.Add(new DataGridTextColumn { Header = "NOTES", Binding = new Binding("Notes"), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _grid.ItemsSource = _rows;
@@ -101,7 +103,8 @@ public sealed class CollectionWindow : Window
         _search.TextChanged += (_, _) => _view?.Refresh();
         _filter.SelectionChanged += (_, _) => _view?.Refresh();
         _grid.SelectionChanged += async (_, _) => await SelectCopyAsync();
-        var side = new Border { Margin = new Thickness(16, 0, 0, 0), Background = Brushes.White, BorderBrush = Brush("#DBE4EF"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(18) };
+
+        var side = new Border { Margin = new Thickness(16, 0, 0, 0), Background = Brushes.White, BorderBrush = Brush("#D3E1EE"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Padding = new Thickness(18) };
         Grid.SetColumn(side, 1);
         layout.Children.Add(side);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -117,7 +120,7 @@ public sealed class CollectionWindow : Window
         _inventorySummary.Margin = new Thickness(0, 0, 0, 14);
         edit.Children.Add(FieldLabel("Game"));
         edit.Children.Add(_game);
-        _game.MaxWidth = 310;
+        _game.MaxWidth = 340;
         _game.HorizontalAlignment = HorizontalAlignment.Stretch;
         edit.Children.Add(FieldLabel("Collection type"));
         edit.Children.Add(_type);
@@ -131,22 +134,25 @@ public sealed class CollectionWindow : Window
         _notes.TextWrapping = TextWrapping.Wrap;
         _notes.AcceptsReturn = true;
         _notes.MinHeight = 68;
+
         var actions = new StackPanel { Margin = new Thickness(0, 15, 0, 0) };
         edit.Children.Add(actions);
         AddButton(actions, "Add / Save", async (_, _) => await SaveAsync());
         AddButton(actions, "New copy", (_, _) => ClearEditor());
-        AddButton(actions, "Detailed inventory / OPL settings", async (_, _) => await OpenDetailsAsync());
+        AddButton(actions, "Detailed inventory", async (_, _) => await OpenDetailsAsync());
         AddButton(actions, "Delete selected copy", async (_, _) => await DeleteAsync());
         edit.Children.Add(_summary);
         _summary.TextWrapping = TextWrapping.Wrap;
         _summary.Foreground = Brush("#70809A");
+
         ClearEditor();
         Loaded += async (_, _) => await LoadAsync();
     }
 
     private static Brush Brush(string hex) => (Brush)new BrushConverter().ConvertFromString(hex)!;
-    private static Border Card() => new() { Background = Brushes.White, BorderBrush = Brush("#DBE4EF"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(15) };
+    private static Border Card() => new() { Background = Brushes.White, BorderBrush = Brush("#D3E1EE"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(16), Padding = new Thickness(15) };
     private static TextBlock FieldLabel(string name) => new() { Text = name, Foreground = Brush("#52657D"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 10, 0, 5) };
+
     private static void Metric(Panel parent, string title, TextBlock number)
     {
         var card = Card();
@@ -194,7 +200,10 @@ public sealed class CollectionWindow : Window
             if (_game.SelectedIndex < 0 && games.Count > 0) _game.SelectedIndex = 0;
             await RefreshAsync(db);
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Collection error", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Collection error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task RefreshAsync(SqliteConnection db)
@@ -202,21 +211,22 @@ public sealed class CollectionWindow : Window
         var rows = new List<CopyRow>();
         await using var cmd = db.CreateCommand();
         cmd.CommandText = @"SELECT c.CopyId,c.GameId,g.CanonicalTitle,c.CopyType,c.DigitalSizeBytes,COALESCE(c.Notes,'')
-FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.CopyType";
+FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId
+WHERE c.CopyType IN ('Physical','Digital')
+ORDER BY g.SortTitle,c.CopyType";
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
-            rows.Add(new CopyRow(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
-                reader.IsDBNull(4) ? null : reader.GetInt64(4), reader.GetString(5)));
+            rows.Add(new CopyRow(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.IsDBNull(4) ? null : reader.GetInt64(4), reader.GetString(5)));
+
         _rows.Clear();
         foreach (var row in rows) _rows.Add(row);
         _view?.Refresh();
         _total.Text = rows.Count.ToString("N0");
         _physical.Text = rows.Count(r => r.CopyType == "Physical").ToString("N0");
         _digital.Text = rows.Count(r => r.CopyType == "Digital").ToString("N0");
-        _opl.Text = rows.Count(r => r.CopyType == "OPL").ToString("N0");
-        var gb = rows.Sum(r => (decimal)(r.SizeBytes ?? 0)) / 1_000_000_000m;
-        _storage.Text = gb.ToString("0.##");
-        _summary.Text = $"{rows.Count} copies  •  Physical: {rows.Count(r => r.CopyType == "Physical")}  •  Digital: {rows.Count(r => r.CopyType == "Digital")}  •  OPL: {rows.Count(r => r.CopyType == "OPL")}  •  Digital storage: {gb:0.##} GB";
+        var bytes = rows.Where(r => r.CopyType == "Digital").Sum(r => r.SizeBytes ?? 0);
+        _storage.Text = bytes >= 1_000_000_000_000L ? $"{bytes / 1_000_000_000_000.0:0.##} TB" : $"{bytes / 1_000_000_000.0:0.##} GB";
+        _summary.Text = $"{rows.Count} copies  •  Physical: {rows.Count(r => r.CopyType == "Physical")}  •  Digital: {rows.Count(r => r.CopyType == "Digital")}  •  Digital storage: {_storage.Text}";
     }
 
     private async Task SelectCopyAsync()
@@ -228,26 +238,22 @@ FROM CollectionCopy c JOIN Game g ON g.GameId=c.GameId ORDER BY g.SortTitle,c.Co
         _size.Text = row.SizeBytes is long bytes ? (bytes / 1_000_000_000m).ToString("0.###", CultureInfo.CurrentCulture) : "";
         _notes.Text = row.Notes;
         _detailTitle.Text = row.Title;
-        _detailBody.Text = $"{row.CopyType} copy  •  {(row.SizeBytes is long selectedBytes ? $"{selectedBytes / 1_000_000_000m:0.###} GB" : "Size not recorded")}";
+        _detailBody.Text = row.CopyType == "Digital" && row.SizeBytes is long selectedBytes
+            ? $"Digital copy  •  {selectedBytes / 1_000_000_000m:0.###} GB"
+            : $"{row.CopyType} copy";
         await LoadSelectedDetailsAsync(row);
     }
 
     private async Task LoadSelectedDetailsAsync(CopyRow row)
     {
-        _inventorySummary.Text = row.CopyType switch
-        {
-            "Physical" => "Inventory details not recorded yet.",
-            "Digital" => "Digital format not recorded yet.",
-            "OPL" => "OPL settings not recorded yet.",
-            _ => ""
-        };
+        _inventorySummary.Text = row.CopyType == "Physical" ? "Inventory details not recorded yet." : "Digital format not recorded yet.";
         try
         {
             await using var db = new SqliteConnection($"Data Source={_dbPath}");
             await db.OpenAsync();
             await using var cmd = db.CreateCommand();
             cmd.CommandText = @"SELECT Edition,CoverPresent,CasePresent,DiscPresent,ManualPresent,
-CoverCondition,CaseCondition,DiscCondition,ManualCondition,DigitalFormat,OplVersion,OplCompatibility,VmcStatus,
+CoverCondition,CaseCondition,DiscCondition,ManualCondition,DigitalFormat,
 PurchaseDate,PurchasePrice,Seller
 FROM CollectionCopyDetails WHERE CopyId=$id";
             cmd.Parameters.AddWithValue("$id", row.CopyId);
@@ -262,16 +268,13 @@ FROM CollectionCopyDetails WHERE CopyId=$id";
                 extra.Add($"Included — Cover: {S(1)}, Case: {S(2)}, Disc: {S(3)}, Manual: {S(4)}");
                 extra.Add($"Condition — Cover: {S(5)}, Case: {S(6)}, Disc: {S(7)}, Manual: {S(8)}");
             }
-            if (row.CopyType is "Digital" or "OPL")
-                extra.Add(string.IsNullOrWhiteSpace(S(9)) ? "File format: not recorded" : $"File format: {S(9)}");
-            if (row.CopyType == "OPL")
+            else
             {
-                extra.Add(string.IsNullOrWhiteSpace(S(10)) ? "OPL version: not recorded" : $"OPL version: {S(10)}");
-                extra.Add($"Compatibility: {S(11)}  •  VMC: {S(12)}");
+                extra.Add(string.IsNullOrWhiteSpace(S(9)) ? "File format: not recorded" : $"File format: {S(9)}");
             }
-            if (!string.IsNullOrWhiteSpace(S(13))) extra.Add($"Purchased: {S(13)}");
-            if (!string.IsNullOrWhiteSpace(S(14))) extra.Add($"Price: {S(14)}");
-            if (!string.IsNullOrWhiteSpace(S(15))) extra.Add($"Source: {S(15)}");
+            if (!string.IsNullOrWhiteSpace(S(10))) extra.Add($"Purchased: {S(10)}");
+            if (!string.IsNullOrWhiteSpace(S(11))) extra.Add($"Price: {S(11)}");
+            if (!string.IsNullOrWhiteSpace(S(12))) extra.Add($"Source: {S(12)}");
             _inventorySummary.Text = string.Join(Environment.NewLine, extra);
         }
         catch (Exception ex)
@@ -288,25 +291,29 @@ FROM CollectionCopyDetails WHERE CopyId=$id";
         _size.Clear();
         _notes.Clear();
         _detailTitle.Text = "Add a collection copy";
-        _detailBody.Text = "Choose a game and format, then save. Select an existing row to edit its details.";
-        _inventorySummary.Text = "Saved inventory and OPL details appear here immediately when you select a copy.";
+        _detailBody.Text = "Choose a game and Physical or Digital type, then save. Select an existing row to edit its details.";
+        _inventorySummary.Text = "Saved copy inventory appears here when you select a copy.";
     }
 
     private async Task SaveAsync()
     {
         if (_game.SelectedValue is not string gameId || _type.SelectedItem is not string type)
         {
-            MessageBox.Show(this, "Select a game and copy type first."); return;
+            MessageBox.Show(this, "Select a game and copy type first.");
+            return;
         }
+
         long? bytes = null;
-        if (!string.IsNullOrWhiteSpace(_size.Text))
+        if (type == "Digital" && !string.IsNullOrWhiteSpace(_size.Text))
         {
             if (!decimal.TryParse(_size.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var gb) || gb < 0 || gb > 1000000)
             {
-                MessageBox.Show(this, "Enter a valid non-negative size in GB."); return;
+                MessageBox.Show(this, "Enter a valid non-negative size in GB.");
+                return;
             }
             bytes = (long)(gb * 1_000_000_000m);
         }
+
         try
         {
             await using var db = new SqliteConnection($"Data Source={_dbPath}");
@@ -328,7 +335,10 @@ VALUES($id,$game,$type,$size,$notes,$now,$now)";
             ClearEditor();
             await RefreshAsync(db);
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task OpenDetailsAsync()
@@ -358,7 +368,10 @@ VALUES($id,$game,$type,$size,$notes,$now,$now)";
             ClearEditor();
             await RefreshAsync(db);
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Delete failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Delete failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private sealed record GameChoice(string Id, string Title);
