@@ -29,6 +29,7 @@ public partial class MainWindow
 {
     private bool _fullCatalogRefreshEnabled;
     private bool _fullCatalogRefreshScheduled;
+    private bool _fullCatalogRefreshing;
 
     internal void EnableFullCatalogRefresh()
     {
@@ -58,14 +59,22 @@ public partial class MainWindow
         }
 
         _collectionRows.CollectionChanged += FullCatalogCollectionChanged;
-        _ = RefreshFullCatalogAsync();
+        // The original initialization still performs its first catalogue refresh. Watching
+        // _games lets us immediately replace that old LIMIT 2000 result once the DB is ready.
+        _games.CollectionChanged += FullCatalogGamesChanged;
+        ScheduleFullCatalogRefresh();
     }
 
     private void FullCatalogCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => ScheduleFullCatalogRefresh();
 
+    private void FullCatalogGamesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!_fullCatalogRefreshing) ScheduleFullCatalogRefresh();
+    }
+
     private void ScheduleFullCatalogRefresh()
     {
-        if (!_fullCatalogRefreshEnabled || _fullCatalogRefreshScheduled) return;
+        if (!_fullCatalogRefreshEnabled || _fullCatalogRefreshScheduled || _fullCatalogRefreshing) return;
         _fullCatalogRefreshScheduled = true;
         Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(async () =>
         {
@@ -96,18 +105,27 @@ public partial class MainWindow
 
     private async Task RefreshFullCatalogAsync()
     {
-        if (string.IsNullOrWhiteSpace(_databasePath) || !File.Exists(_databasePath)) return;
+        if (_fullCatalogRefreshing) return;
+        if (string.IsNullOrWhiteSpace(_databasePath) || !File.Exists(_databasePath))
+        {
+            // Initialization may still be seeding the portable DB. The _games watcher will
+            // schedule another refresh as soon as the legacy first query produces rows.
+            return;
+        }
 
-        var search = SearchBox.Text.Trim();
-        var region = (RegionFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All regions";
-        var language = (LanguageFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? string.Empty;
-        var releaseType = (ReleaseTypeFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All release types";
-        var results = new List<GameListItem>();
+        _fullCatalogRefreshing = true;
+        try
+        {
+            var search = SearchBox.Text.Trim();
+            var region = (RegionFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All regions";
+            var language = (LanguageFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? string.Empty;
+            var releaseType = (ReleaseTypeFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All release types";
+            var results = new List<GameListItem>();
 
-        await using var connection = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly");
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = @"
+            await using var connection = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly");
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
 SELECT g.GameId, g.CanonicalTitle, g.FirstReleaseYear, g.Developer,
        COALESCE((SELECT d.SerialRaw FROM Release pr LEFT JOIN Disc d ON d.ReleaseId=pr.ReleaseId WHERE pr.GameId=g.GameId
                  ORDER BY pr.IsPrimary DESC,CASE WHEN pr.RegionCode IN ('NorthAmerica','USA','NTSC-U','NTSC-U/C') THEN 0 WHEN pr.RegionCode IN ('Europe','PAL','Europe/PAL','Australia') THEN 1 ELSE 2 END,d.DiscNumber LIMIT 1), '') AS PrimarySerial,
@@ -123,41 +141,46 @@ AND ($region='All regions' OR EXISTS (SELECT 1 FROM Release r WHERE r.GameId=g.G
 AND ($language='' OR EXISTS (SELECT 1 FROM Release r JOIN ReleaseLanguage rl ON rl.ReleaseId=r.ReleaseId WHERE r.GameId=g.GameId AND (LOWER(rl.LanguageCode)=LOWER($language) OR LOWER(rl.LanguageCode)=LOWER($languageName))))
 AND ($releaseType='All release types' OR EXISTS (SELECT 1 FROM Release r WHERE r.GameId=g.GameId AND r.ReleaseType=$releaseType))
 ORDER BY g.SortTitle COLLATE NOCASE;";
-        command.Parameters.AddWithValue("$search", search);
-        command.Parameters.AddWithValue("$pattern", $"%{search}%");
-        command.Parameters.AddWithValue("$region", region);
-        command.Parameters.AddWithValue("$language", language);
-        command.Parameters.AddWithValue("$languageName", LanguageName(language));
-        command.Parameters.AddWithValue("$releaseType", releaseType);
+            command.Parameters.AddWithValue("$search", search);
+            command.Parameters.AddWithValue("$pattern", $"%{search}%");
+            command.Parameters.AddWithValue("$region", region);
+            command.Parameters.AddWithValue("$language", language);
+            command.Parameters.AddWithValue("$languageName", LanguageName(language));
+            command.Parameters.AddWithValue("$releaseType", releaseType);
 
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            var languageCodes = reader.IsDBNull(7)
-                ? Array.Empty<string>()
-                : reader.GetString(7).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            results.Add(new GameListItem
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                GameId = reader.GetString(0),
-                Title = reader.GetString(1),
-                Year = reader.IsDBNull(2) ? "—" : reader.GetInt32(2).ToString(),
-                Developer = reader.IsDBNull(3) ? "—" : reader.GetString(3),
-                PrimarySerial = reader.GetString(4),
-                Region = FriendlyRegion(reader.GetString(5)),
-                RegionFlag = FlagIconFactory.ForRegion(reader.GetString(5)),
-                ReleaseType = reader.GetString(6),
-                LanguageFlags = languageCodes.Select(FlagIconFactory.ForLanguage).Where(x => x is not null).Cast<ImageSource>().ToArray(),
-                OwnedCount = reader.GetInt32(8)
-            });
-        }
+                var languageCodes = reader.IsDBNull(7)
+                    ? Array.Empty<string>()
+                    : reader.GetString(7).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                results.Add(new GameListItem
+                {
+                    GameId = reader.GetString(0),
+                    Title = reader.GetString(1),
+                    Year = reader.IsDBNull(2) ? "—" : reader.GetInt32(2).ToString(),
+                    Developer = reader.IsDBNull(3) ? "—" : reader.GetString(3),
+                    PrimarySerial = reader.GetString(4),
+                    Region = FriendlyRegion(reader.GetString(5)),
+                    RegionFlag = FlagIconFactory.ForRegion(reader.GetString(5)),
+                    ReleaseType = reader.GetString(6),
+                    LanguageFlags = languageCodes.Select(FlagIconFactory.ForLanguage).Where(x => x is not null).Cast<ImageSource>().ToArray(),
+                    OwnedCount = reader.GetInt32(8)
+                });
+            }
 
-        _games.Clear();
-        foreach (var item in results) _games.Add(item);
-        ResultCountText.Text = $"{results.Count:N0} games";
-        DatabaseCountText.Text = $"Catalogue: {results.Count:N0} shown";
-        FooterCatalogText.Text = $"{results.Count:N0} shown";
-        if (results.Count > 0 && GamesGrid.SelectedItem is null) GamesGrid.SelectedIndex = 0;
-        if (results.Count == 0) ClearSelectedGame();
+            _games.Clear();
+            foreach (var item in results) _games.Add(item);
+            ResultCountText.Text = $"{results.Count:N0} games";
+            DatabaseCountText.Text = $"Catalogue: {results.Count:N0} shown";
+            FooterCatalogText.Text = $"{results.Count:N0} shown";
+            if (results.Count > 0 && GamesGrid.SelectedItem is null) GamesGrid.SelectedIndex = 0;
+            if (results.Count == 0) ClearSelectedGame();
+        }
+        finally
+        {
+            _fullCatalogRefreshing = false;
+        }
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
