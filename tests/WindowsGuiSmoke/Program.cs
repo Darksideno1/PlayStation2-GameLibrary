@@ -50,6 +50,7 @@ var staThread = new System.Threading.Thread(() =>
 
                 var detailsButton = FindVisualChildren<Button>(window).First(x => string.Equals((string?)x.Content, "Open Game Details", StringComparison.OrdinalIgnoreCase));
                 detailsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                PumpDispatcher(TimeSpan.FromMilliseconds(1400));
                 window.UpdateLayout();
                 var pageTitle = (TextBlock)window.FindName("PageTitle");
                 if (!string.Equals(pageTitle.Text, "Game Details", StringComparison.Ordinal))
@@ -69,6 +70,8 @@ var staThread = new System.Threading.Thread(() =>
                     throw new Exception("Approved Game Details collection summary is missing.");
                 if (!allText.Any(x => string.Equals(x.Text, "Linked releases", StringComparison.Ordinal)))
                     throw new Exception("Game Details must describe linked releases instead of exposing a primary release serial.");
+                if (allText.Any(x => x.Text is "Primary release" or "Primary serial"))
+                    throw new Exception("Game Details still exposes a primary release label.");
 
                 CaptureWindow(window, "game-details-screenshot.png");
 
@@ -141,6 +144,22 @@ staThread.SetApartmentState(System.Threading.ApartmentState.STA);
 staThread.Start();
 staThread.Join();
 if (threadError is not null) throw threadError;
+
+static void PumpDispatcher(TimeSpan duration)
+{
+    var frame = new DispatcherFrame();
+    var stop = new DispatcherTimer(DispatcherPriority.Background)
+    {
+        Interval = duration
+    };
+    stop.Tick += (_, _) =>
+    {
+        stop.Stop();
+        frame.Continue = false;
+    };
+    stop.Start();
+    Dispatcher.PushFrame(frame);
+}
 
 static void CaptureWindow(Window window, string fileName)
 {
