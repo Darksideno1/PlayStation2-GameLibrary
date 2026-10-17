@@ -37,6 +37,16 @@ internal sealed class MediaLibraryService
         }
     }
 
+    public string? FindCoverForSerials(IEnumerable<string?> serials)
+    {
+        foreach (var serial in serials.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var path = FindCoverForSerial(serial);
+            if (path is not null) return path;
+        }
+        return null;
+    }
+
     public ImageSource? LoadImage(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
