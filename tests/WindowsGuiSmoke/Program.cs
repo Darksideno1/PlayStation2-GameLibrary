@@ -29,6 +29,17 @@ var staThread = new System.Threading.Thread(() =>
                 if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load the full catalogue within 90 seconds.");
                 var grid = (DataGrid)window.FindName("GamesGrid");
                 if (grid.Items.Count < 3000) return;
+
+                var languageFilter = (ComboBox)window.FindName("LanguageFilter");
+                if (languageFilter.Items.Count < 15) return;
+
+                var headers = grid.Columns.Select(c => c.Header?.ToString() ?? string.Empty).ToArray();
+                if (headers.Any(h => string.Equals(h, "ID", StringComparison.OrdinalIgnoreCase)))
+                    throw new Exception("Conceptual catalog must not expose one release serial as the game ID.");
+                foreach (var expectedHeader in new[] { "TITLE", "YEAR", "REGIONS", "LANGUAGES", "RELEASE TYPES", "OWNED" })
+                    if (!headers.Contains(expectedHeader, StringComparer.OrdinalIgnoreCase))
+                        throw new Exception($"Conceptual catalog column missing: {expectedHeader}");
+
                 timer.Stop();
                 window.UpdateLayout();
                 CaptureWindow(window, "catalogue-screenshot.png");
@@ -107,7 +118,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("One-step Add to Collection did not save copy details.");
                     completed = true;
-                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games, approved Game Details layout opens inline, and one-step Add to Collection persists copy + details.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} conceptual games with dynamic language filters, approved Game Details opens inline, and one-step Add persists copy + details.");
                 }
                 window.Close();
             }
