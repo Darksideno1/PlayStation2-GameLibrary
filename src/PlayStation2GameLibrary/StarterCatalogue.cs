@@ -8,8 +8,9 @@ using Microsoft.Data.Sqlite;
 namespace PlayStation2GameLibrary;
 
 /// <summary>
-/// Seeds a fresh portable database. Legacy array seeds remain supported for source/dev tests,
-/// while release builds use the official GameDB-PS2 top-level object containing every serial/release.
+/// Seeds a fresh portable database from the official GameDB-PS2 source.
+/// The catalogue keeps every legitimate game/release regardless of language.
+/// Obvious demos, system utilities and non-game discs remain excluded.
 /// </summary>
 public static class StarterCatalogue
 {
@@ -36,6 +37,10 @@ public static class StarterCatalogue
         new(@"\bkiosk\b", RegexOptions.IgnoreCase | RegexOptions.Compiled),
         new(@"\bbonus\s+demo\b", RegexOptions.IgnoreCase | RegexOptions.Compiled),
     };
+
+    private static readonly Regex DiscSuffixPattern = new(
+        @"\s*(?:[-:–]\s*)?[\(\[]?\s*(?:disc|disk)\s*(?:no\.?\s*)?([0-9]+|[ivx]+)\s*[\)\]]?\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static async Task<int> EnsureSeededAsync(string databasePath, string seedPath)
     {
@@ -71,22 +76,22 @@ public static class StarterCatalogue
             var languages = ReadValues(record, "language", "languages");
             if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(serial)) continue;
             if (IsClearNonGame(title)) continue;
-            if (IsJapanOrKorea(region) && !languages.Any(IsEnglish)) continue;
 
             releases.Add(new SourceRelease(
                 title.Trim(),
+                ConceptualTitle(title),
                 serial.Trim(),
                 string.IsNullOrWhiteSpace(region) ? "Unknown" : region.Trim(),
-                ReadString(record, "developer"),
-                ReadString(record, "publisher"),
+                ReadJoined(record, "developer"),
+                ReadJoined(record, "publisher"),
                 ReadYear(record),
                 languages,
                 InferReleaseType(title)));
         }
 
         var groups = releases
-            .GroupBy(r => NormalizeTitle(r.Title), StringComparer.Ordinal)
-            .OrderBy(g => g.Min(r => r.Title), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(r => NormalizeTitle(r.ConceptTitle), StringComparer.Ordinal)
+            .OrderBy(g => g.Min(r => r.ConceptTitle), StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         using var transaction = db.BeginTransaction();
@@ -102,6 +107,7 @@ public static class StarterCatalogue
             var developer = !string.IsNullOrWhiteSpace(primary.Developer)
                 ? primary.Developer
                 : ordered.Select(r => r.Developer).FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
+            var canonicalTitle = primary.ConceptTitle;
 
             await using (var game = db.CreateCommand())
             {
@@ -109,8 +115,8 @@ public static class StarterCatalogue
                 game.CommandText = @"INSERT INTO Game(GameId,CanonicalTitle,SortTitle,FirstReleaseYear,Developer,CreatedUtc,UpdatedUtc)
 VALUES($id,$title,$sort,$year,$developer,$now,$now)";
                 game.Parameters.AddWithValue("$id", gameId);
-                game.Parameters.AddWithValue("$title", primary.Title);
-                game.Parameters.AddWithValue("$sort", primary.Title);
+                game.Parameters.AddWithValue("$title", canonicalTitle);
+                game.Parameters.AddWithValue("$sort", canonicalTitle);
                 game.Parameters.AddWithValue("$year", firstYear == 0 ? DBNull.Value : firstYear);
                 game.Parameters.AddWithValue("$developer", string.IsNullOrWhiteSpace(developer) ? DBNull.Value : developer);
                 game.Parameters.AddWithValue("$now", now);
@@ -132,7 +138,7 @@ VALUES($id,$game,$title,$region,$type,$publisher,$year,$primary,'Seeded from off
                     release.Parameters.AddWithValue("$type", source.ReleaseType);
                     release.Parameters.AddWithValue("$publisher", string.IsNullOrWhiteSpace(source.Publisher) ? DBNull.Value : source.Publisher);
                     release.Parameters.AddWithValue("$year", source.Year.HasValue ? source.Year.Value : DBNull.Value);
-                    release.Parameters.AddWithValue("$primary", ReferenceEquals(source, primary) || source == primary ? 1 : 0);
+                    release.Parameters.AddWithValue("$primary", source == primary ? 1 : 0);
                     release.Parameters.AddWithValue("$now", now);
                     await release.ExecuteNonQueryAsync();
                 }
@@ -187,7 +193,7 @@ VALUES($id,$title,$sort,$year,$dev,$now,$now)";
                 game.Parameters.AddWithValue("$title", title);
                 game.Parameters.AddWithValue("$sort", title);
                 game.Parameters.AddWithValue("$year", year.HasValue ? year.Value : DBNull.Value);
-                game.Parameters.AddWithValue("$dev", ReadString(entry, "developer"));
+                game.Parameters.AddWithValue("$dev", ReadJoined(entry, "developer"));
                 game.Parameters.AddWithValue("$now", now);
                 await game.ExecuteNonQueryAsync();
             }
@@ -200,7 +206,7 @@ VALUES($id,$game,$title,$region,$publisher,$year,1,$now,$now)";
                 release.Parameters.AddWithValue("$game", id);
                 release.Parameters.AddWithValue("$title", title);
                 release.Parameters.AddWithValue("$region", ReadString(entry, "region"));
-                release.Parameters.AddWithValue("$publisher", ReadString(entry, "publisher"));
+                release.Parameters.AddWithValue("$publisher", ReadJoined(entry, "publisher"));
                 release.Parameters.AddWithValue("$year", year.HasValue ? year.Value : DBNull.Value);
                 release.Parameters.AddWithValue("$now", now);
                 await release.ExecuteNonQueryAsync();
@@ -238,6 +244,16 @@ VALUES($id,$game,$title,$region,$publisher,$year,1,$now,$now)";
         return value.ValueKind == JsonValueKind.String ? value.GetString()?.Trim() ?? string.Empty : string.Empty;
     }
 
+    private static string ReadJoined(JsonElement record, string name)
+    {
+        if (!record.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return string.Empty;
+        if (value.ValueKind == JsonValueKind.String) return value.GetString()?.Trim() ?? string.Empty;
+        if (value.ValueKind == JsonValueKind.Array)
+            return string.Join(", ", value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String)
+                .Select(x => x.GetString()?.Trim() ?? string.Empty).Where(x => x.Length > 0));
+        return string.Empty;
+    }
+
     private static IReadOnlyList<string> ReadValues(JsonElement record, params string[] names)
     {
         JsonElement value = default;
@@ -268,6 +284,13 @@ VALUES($id,$game,$title,$region,$publisher,$year,1,$now,$now)";
         return null;
     }
 
+    private static string ConceptualTitle(string value)
+    {
+        var cleaned = DiscSuffixPattern.Replace(value.Trim(), string.Empty).Trim();
+        cleaned = cleaned.TrimEnd('-', ':', '–').Trim();
+        return cleaned.Length == 0 ? value.Trim() : cleaned;
+    }
+
     private static string NormalizeTitle(string value)
     {
         var normalized = value.Normalize(NormalizationForm.FormKC).Trim().ToLowerInvariant();
@@ -278,18 +301,6 @@ VALUES($id,$game,$title,$region,$publisher,$year,1,$now,$now)";
     private static string NormalizeSerial(string value) => new(value.ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
 
     private static bool IsClearNonGame(string title) => NonGameTitlePatterns.Any(pattern => pattern.IsMatch(title));
-
-    private static bool IsJapanOrKorea(string region)
-    {
-        var value = region.Trim().ToLowerInvariant();
-        return value.Contains("ntsc-j") || value.Contains("japan") || value is "jp" or "j" || value.Contains("korea") || value is "kr" or "k";
-    }
-
-    private static bool IsEnglish(string language)
-    {
-        var value = language.Trim().ToLowerInvariant();
-        return value is "en" or "eng" or "english";
-    }
 
     private static int PrimaryRank(SourceRelease release)
     {
@@ -310,6 +321,7 @@ VALUES($id,$game,$title,$region,$publisher,$year,1,$now,$now)";
 
     private sealed record SourceRelease(
         string Title,
+        string ConceptTitle,
         string Serial,
         string Region,
         string Developer,
