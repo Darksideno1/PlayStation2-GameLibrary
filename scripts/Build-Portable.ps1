@@ -59,6 +59,9 @@ try {
         $seedTarget = Join-Path $output 'data'
         New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
         Copy-Item $FullSource (Join-Path $seedTarget 'PS2.data.full.json') -Force
+        # MainWindow and ADMIN both call StarterCatalogue with data/starter-catalog.json.
+        # In release builds that name intentionally points at the pinned full multi-release source.
+        Copy-Item $FullSource (Join-Path $seedTarget 'starter-catalog.json') -Force
         Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
 
@@ -79,6 +82,7 @@ Run USER\PlayStation2GameLibrary.exe for normal use or ADMIN\PlayStation2GameLib
 USER and ADMIN share the package-level Data, Config and Media folders.
 The program no longer reuses the old %LOCALAPPDATA% test database by default.
 The portable build contains a pinned, SHA256-verified official GameDB-PS2 full-source snapshot.
+A fresh portable Data/catalogue.db is seeded from that full source on first launch.
 '@ | Set-Content (Join-Path $Stage 'START_HERE.txt') -Encoding UTF8
 
     Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $Zip -CompressionLevel Optimal -Force
@@ -86,7 +90,7 @@ The portable build contains a pinned, SHA256-verified official GameDB-PS2 full-s
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/PS2.data.full.json','ADMIN/data/PS2.data.full.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/PS2.data.full.json','ADMIN/data/PS2.data.full.json','USER/data/starter-catalog.json','ADMIN/data/starter-catalog.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
