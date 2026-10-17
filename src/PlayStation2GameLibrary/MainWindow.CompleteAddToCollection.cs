@@ -5,8 +5,8 @@ using System.Windows.Controls;
 namespace PlayStation2GameLibrary;
 
 /// <summary>
-/// Routes every main-window "+ Add to Collection" action to the complete
-/// one-step entry dialog, before the older collection-manager handler runs.
+/// Routes main-window collection add/edit actions to the complete one-step form
+/// before legacy handlers can open the older two-step collection manager.
 /// </summary>
 internal static class CompleteAddToCollectionBootstrap
 {
@@ -16,21 +16,28 @@ internal static class CompleteAddToCollectionBootstrap
         EventManager.RegisterClassHandler(
             typeof(Button),
             Button.ClickEvent,
-            new RoutedEventHandler(HandleAddToCollectionClick),
+            new RoutedEventHandler(HandleCollectionActionClick),
             true);
     }
 
-    private static async void HandleAddToCollectionClick(object sender, RoutedEventArgs e)
+    private static async void HandleCollectionActionClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button) return;
         if (Window.GetWindow(button) is not MainWindow main) return;
         var label = button.Content?.ToString()?.Replace("  ", " ").Trim();
-        if (!string.Equals(label, "+ Add to Collection", StringComparison.OrdinalIgnoreCase)) return;
 
-        // Class handlers run before the instance Click handlers. Marking the routed
-        // event handled prevents the legacy two-step CollectionWindow from opening.
-        e.Handled = true;
-        await main.OpenCompleteAddToCollectionAsync();
+        if (string.Equals(label, "+ Add to Collection", StringComparison.OrdinalIgnoreCase))
+        {
+            e.Handled = true;
+            await main.OpenCompleteAddToCollectionAsync();
+            return;
+        }
+
+        if (string.Equals(label, "Edit selected", StringComparison.OrdinalIgnoreCase))
+        {
+            e.Handled = true;
+            await main.OpenCompleteEditCollectionAsync();
+        }
     }
 }
 
@@ -54,5 +61,22 @@ public partial class MainWindow
 
         if (_inlineGameDetailsPage is not null && string.Equals(PageTitle.Text, "Game Details", StringComparison.Ordinal))
             await LoadInlineGameDetailsAsync(selected.GameId, _inlineGameDetailsPage);
+    }
+
+    internal async Task OpenCompleteEditCollectionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_databasePath)) return;
+        if (CollectionGrid.SelectedItem is not CollectionListItem selected)
+        {
+            MessageBox.Show(this, "Select a collection entry first.", "Edit Collection Entry", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new AddCollectionEntryWindow(_databasePath, selected.GameId, selected.CopyId) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+
+        await RefreshCollectionPageAsync();
+        await RefreshGamesAsync();
+        await RefreshFooterAsync();
     }
 }
