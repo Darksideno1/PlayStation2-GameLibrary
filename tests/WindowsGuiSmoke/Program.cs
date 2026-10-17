@@ -70,27 +70,30 @@ var staThread = new System.Threading.Thread(() =>
                 {
                     try
                     {
-                        if (DateTime.UtcNow > deadline) throw new TimeoutException("Collection editor timed out.");
-                        var copyDialog = Application.Current.Windows.OfType<CollectionWindow>().FirstOrDefault();
-                        if (copyDialog is null) return;
-                        var gameBox = FindVisualChildren<ComboBox>(copyDialog).FirstOrDefault(x => x.SelectedValuePath == "Id");
-                        if (gameBox?.SelectedValue is not string) return;
+                        if (DateTime.UtcNow > deadline) throw new TimeoutException("Complete Add to Collection dialog timed out.");
+                        var addDialog = Application.Current.Windows.OfType<AddCollectionEntryWindow>().FirstOrDefault();
+                        if (addDialog is null) return;
+                        var releaseBox = FindVisualChildren<ComboBox>(addDialog).FirstOrDefault(x => x.Items.Count > 0);
+                        if (releaseBox?.SelectedItem is null) return;
                         if (!saved)
                         {
-                            var saveButton = FindVisualChildren<Button>(copyDialog).First(x => string.Equals((string?)x.Content, "Add / Save", StringComparison.OrdinalIgnoreCase));
+                            var saveButton = FindVisualChildren<Button>(addDialog).First(x => string.Equals((string?)x.Content, "Add to Collection", StringComparison.OrdinalIgnoreCase));
                             saveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                             saved = true;
                             return;
                         }
-                        var copyGrid = FindVisualChildren<DataGrid>(copyDialog).FirstOrDefault();
-                        if (copyGrid?.Items.Count < 1) return;
+                        if (addDialog.IsVisible) return;
                         editorTimer.Stop();
-                        copyDialog.Close();
                     }
-                    catch (Exception ex) { error = ex; editorTimer.Stop(); Application.Current.Windows.OfType<CollectionWindow>().FirstOrDefault()?.Close(); }
+                    catch (Exception ex)
+                    {
+                        error = ex;
+                        editorTimer.Stop();
+                        Application.Current.Windows.OfType<AddCollectionEntryWindow>().FirstOrDefault()?.Close();
+                    }
                 };
                 editorTimer.Start();
-                var addButton = FindVisualChildren<Button>(window).First(x => string.Equals((string?)x.Content, "+ Add to Collection", StringComparison.OrdinalIgnoreCase));
+                var addButton = FindVisualChildren<Button>(window).First(x => string.Equals(((string?)x.Content)?.Replace("  ", " ").Trim(), "+ Add to Collection", StringComparison.OrdinalIgnoreCase));
                 addButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 if (error is null)
                 {
@@ -99,9 +102,12 @@ var staThread = new System.Threading.Thread(() =>
                     using var cmd = db.CreateCommand();
                     cmd.CommandText = "SELECT COUNT(*) FROM CollectionCopy";
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
-                        throw new Exception("Add to Collection did not persist through UI.");
+                        throw new Exception("One-step Add to Collection did not persist through UI.");
+                    cmd.CommandText = "SELECT COUNT(*) FROM CollectionCopyDetails";
+                    if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
+                        throw new Exception("One-step Add to Collection did not save copy details.");
                     completed = true;
-                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games, approved Game Details layout opens inline, returns to Catalog, and collection persistence works.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games, approved Game Details layout opens inline, and one-step Add to Collection persists copy + details.");
                 }
                 window.Close();
             }
