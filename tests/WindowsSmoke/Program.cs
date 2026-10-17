@@ -90,8 +90,19 @@ WHERE CanonicalTitle LIKE '%Official PlayStation 2 Magazine Demo%'
 WHERE EXISTS (SELECT 1 FROM Release r WHERE r.GameId=g.GameId)
 AND NOT EXISTS (SELECT 1 FROM Release r WHERE r.GameId=g.GameId AND r.RegionCode NOT LIKE '%NTSC-J%' AND LOWER(r.RegionCode) NOT LIKE '%japan%' AND LOWER(r.RegionCode) NOT LIKE '%korea%')
 AND NOT EXISTS (SELECT 1 FROM Release r JOIN ReleaseLanguage rl ON rl.ReleaseId=r.ReleaseId WHERE r.GameId=g.GameId AND LOWER(rl.LanguageCode) IN ('english','en','eng'))";
-            if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 0)
-                throw new Exception("JP/KR-only games without English were not excluded.");
+            if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) == 0)
+                throw new Exception("All-language catalog policy failed: no JP/KR-only games without English were retained.");
+
+            cmd.CommandText = "SELECT COUNT(*) FROM Game WHERE CanonicalTitle='0 Story' COLLATE NOCASE";
+            if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 1)
+                throw new Exception("0 Story is missing or its Disc 1 / Disc 2 titles were not grouped as one conceptual game.");
+
+            cmd.CommandText = @"SELECT COUNT(DISTINCT d.SerialRaw) FROM Game g
+JOIN Release r ON r.GameId=g.GameId
+JOIN Disc d ON d.ReleaseId=r.ReleaseId
+WHERE g.CanonicalTitle='0 Story' COLLATE NOCASE AND d.SerialRaw IN ('SLPM-65002','SLPM-65003')";
+            if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 2)
+                throw new Exception("0 Story did not retain both full-game disc serials SLPM-65002 / SLPM-65003.");
 
             cmd.CommandText = @"SELECT COUNT(*) FROM Game g
 JOIN Release r ON r.GameId=g.GameId
@@ -144,7 +155,7 @@ VALUES($copy,'Collector Edition','Yes','Yes','Yes','No','Very Good',$now)";
             throw new Exception("Catalogue changed after reopening database.");
     }
 
-    Console.WriteLine($"PASS: {initialGames:N0} conceptual games / {initialReleases:N0} releases -> multi-release + Taxi 3 checks -> collection persistence.");
+    Console.WriteLine($"PASS: {initialGames:N0} conceptual games / {initialReleases:N0} releases -> all-language catalog + 0 Story + multi-release checks -> collection persistence.");
 }
 finally
 {
