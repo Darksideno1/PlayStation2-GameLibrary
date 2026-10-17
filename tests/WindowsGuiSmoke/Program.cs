@@ -15,20 +15,27 @@ var staThread = new System.Threading.Thread(() =>
         var temp = Path.Combine(Path.GetTempPath(), "PS2-GUI-Smoke-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         Environment.SetEnvironmentVariable("PS2_LIBRARY_DATA_DIR", temp);
+
+        var officialFullSeed = Path.Combine(Directory.GetCurrentDirectory(), "data", "PS2.data.full.json");
+        var runtimeSeed = Path.Combine(AppContext.BaseDirectory, "data", "starter-catalog.json");
+        if (!File.Exists(officialFullSeed)) throw new FileNotFoundException("Official full GameDB seed is missing for GUI smoke test.", officialFullSeed);
+        Directory.CreateDirectory(Path.GetDirectoryName(runtimeSeed)!);
+        File.Copy(officialFullSeed, runtimeSeed, true);
+
         Exception? error = null;
         var completed = false;
         var app = new PlayStation2GameLibrary.App { ShutdownMode = ShutdownMode.OnMainWindowClose };
         var window = new MainWindow();
-        var deadline = DateTime.UtcNow.AddSeconds(90);
+        var deadline = DateTime.UtcNow.AddSeconds(120);
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         timer.Tick += (_, _) =>
         {
             if (completed) return;
             try
             {
-                if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load the full catalogue within 90 seconds.");
+                if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load the full catalogue within 120 seconds.");
                 var grid = (DataGrid)window.FindName("GamesGrid");
-                if (grid.Items.Count < 3000) return;
+                if (grid.Items.Count < 6500) return;
 
                 var languageFilter = (ComboBox)window.FindName("LanguageFilter");
                 if (languageFilter.Items.Count < 15) return;
@@ -126,7 +133,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("One-step Add to Collection did not save copy details.");
                     completed = true;
-                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} conceptual games, linked-release Game Details opens inline, Add has calendar + format selector, and one-step persistence works.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} conceptual games from the official full source, linked-release Game Details opens inline, Add has calendar + format selector, and one-step persistence works.");
                 }
                 window.Close();
             }
