@@ -156,6 +156,10 @@ d.DiscNumber";
 
             var releaseCount = _inlineReleases.Count;
             var releaseText = releaseCount == 1 ? "1 release" : $"{releaseCount} releases";
+            var serials = _inlineReleases
+                .SelectMany(x => x.Serial.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
             var metricValue = FindNamed<TextBlock>(page, "InlineCollectionPrimary");
             if (metricValue is not null)
@@ -212,26 +216,33 @@ d.DiscNumber";
                 publisher.Text = publishers.Length == 0 ? "—" : string.Join(", ", publishers.Take(4));
             }
 
+            var metadataPath = Path.Combine(AppContext.BaseDirectory, "data", "OPL.metadata.json");
+            var fallback = MetadataEnrichmentService.FindBestForSerials(metadataPath, serials);
             await using (var db = new SqliteConnection($"Data Source={_databasePath}"))
             {
                 await db.OpenAsync();
                 await MetadataEnrichmentService.EnsureSchemaAsync(db);
                 await using var cmd = db.CreateCommand();
-                cmd.CommandText = "SELECT COALESCE(Description,''),COALESCE(Genres,'') FROM Game WHERE GameId=$id";
+                cmd.CommandText = "SELECT COALESCE(Description,''),COALESCE(Genres,''),COALESCE(Developer,'') FROM Game WHERE GameId=$id";
                 cmd.Parameters.AddWithValue("$id", gameId);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     var description = FindNamed<TextBlock>(page, "InlineDescription");
                     var genres = FindNamed<TextBlock>(page, "InlineGenres");
+                    var developer = FindNamed<TextBlock>(page, "InlineDeveloper");
                     var descValue = reader.GetString(0);
                     var genreValue = reader.GetString(1);
+                    var developerValue = reader.GetString(2);
+                    if (string.IsNullOrWhiteSpace(descValue)) descValue = fallback.Description;
+                    if (string.IsNullOrWhiteSpace(genreValue)) genreValue = fallback.Genre;
+                    if (string.IsNullOrWhiteSpace(developerValue)) developerValue = fallback.Developer;
                     if (description is not null) description.Text = string.IsNullOrWhiteSpace(descValue) ? "No description available from the metadata sources." : descValue;
                     if (genres is not null) genres.Text = string.IsNullOrWhiteSpace(genreValue) ? "—" : genreValue;
+                    if (developer is not null && !string.IsNullOrWhiteSpace(developerValue)) developer.Text = developerValue;
                 }
             }
 
-            var serials = _inlineReleases.SelectMany(x => x.Serial.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToArray();
             var coverPath = _mediaLibrary.FindCoverForSerials(serials);
             var image = _mediaLibrary.LoadImage(coverPath);
             var cover = FindNamed<Image>(page, "InlineCoverImage");
