@@ -6,6 +6,9 @@ $Project = Join-Path $ProjectRoot 'src/PlayStation2GameLibrary/PlayStation2GameL
 $Dist = Join-Path $ProjectRoot 'dist'
 $Stage = Join-Path $Dist 'PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_PORTABLE'
 $Zip = Join-Path $Dist 'PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_PORTABLE.zip'
+$FullSource = Join-Path $ProjectRoot 'data/PS2.data.full.json'
+$FullSourceUrl = 'https://github.com/niemasd/GameDB-PS2/releases/download/2026-07-16_20-23-50/PS2.data.json'
+$FullSourceSha256 = '471613adebaf40080ab9e96029fb10fea92bbe6a1af33724690e274e7235d9b8'
 if (-not $IsWindows -and $env:OS -ne 'Windows_NT') { throw 'Run this release script on Windows 10/11.' }
 if (-not (Test-Path $Project)) { throw "Project file not found: $Project" }
 $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
@@ -27,12 +30,17 @@ if (-not $pythonCommand) { throw 'Python was not found. Install Python 3 to run 
 if ($LASTEXITCODE -ne 0) { throw 'Python interpreter could not run.' }
 Push-Location $ProjectRoot
 try {
+    Write-Host "Downloading pinned official GameDB-PS2 source..."
+    Invoke-WebRequest -Uri $FullSourceUrl -OutFile $FullSource -UseBasicParsing
+    $actualHash = (Get-FileHash -Path $FullSource -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -ne $FullSourceSha256) { throw "Official GameDB source SHA256 mismatch. Expected $FullSourceSha256, got $actualHash" }
+
     & $pythonCommand @pythonPrefixArgs -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & $pythonCommand @pythonPrefixArgs tests/validate_static.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & $pythonCommand @pythonPrefixArgs tests/validate_full_catalog.py --report FULL_CATALOG_VALIDATION.txt
-    if ($LASTEXITCODE -ne 0) { throw 'Full GameDB catalogue validation failed.' }
+    & $pythonCommand @pythonPrefixArgs tests/validate_official_full_catalog.py --source $FullSource --report FULL_CATALOG_VALIDATION.txt
+    if ($LASTEXITCODE -ne 0) { throw 'Official full GameDB catalogue validation failed.' }
     & $dotnetCommand.Source run --project tests/WindowsSmoke/WindowsSmoke.csproj --configuration Release
     if ($LASTEXITCODE -ne 0) { throw 'Catalogue → Add to Collection → reopen persistence smoke test failed.' }
     & $dotnetCommand.Source run --project tests/WindowsGuiSmoke/WindowsGuiSmoke.csproj --configuration Release
@@ -50,6 +58,7 @@ try {
         Copy-Item (Join-Path $ProjectRoot 'database/schema.sql') (Join-Path $schemaTarget 'schema.sql') -Force
         $seedTarget = Join-Path $output 'data'
         New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
+        Copy-Item $FullSource (Join-Path $seedTarget 'PS2.data.full.json') -Force
         Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
 
@@ -69,6 +78,7 @@ Extract the entire archive before running it.
 Run USER\PlayStation2GameLibrary.exe for normal use or ADMIN\PlayStation2GameLibrary.exe for catalogue maintenance.
 USER and ADMIN share the package-level Data, Config and Media folders.
 The program no longer reuses the old %LOCALAPPDATA% test database by default.
+The portable build contains a pinned, SHA256-verified official GameDB-PS2 full-source snapshot.
 '@ | Set-Content (Join-Path $Stage 'START_HERE.txt') -Encoding UTF8
 
     Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $Zip -CompressionLevel Optimal -Force
@@ -76,9 +86,12 @@ The program no longer reuses the old %LOCALAPPDATA% test database by default.
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/PS2.data.full.json','ADMIN/data/PS2.data.full.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
     Write-Host "Portable package created: $Zip"
-} finally { Pop-Location }
+} finally {
+    if (Test-Path $FullSource) { Remove-Item $FullSource -Force -ErrorAction SilentlyContinue }
+    Pop-Location
+}
