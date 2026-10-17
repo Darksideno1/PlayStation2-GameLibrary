@@ -8,6 +8,9 @@ namespace PlayStation2GameLibrary;
 internal static class MetadataEnrichmentService
 {
     private const string StateKey = "opl-cfg-enrichment-sha256";
+    private static readonly object CacheLock = new();
+    private static string? _cachedPath;
+    private static Dictionary<string, OplMetadata>? _cachedMetadata;
 
     public static async Task EnsureSchemaAsync(SqliteConnection db)
     {
@@ -51,20 +54,7 @@ UpdatedUtc TEXT NOT NULL
             if (string.Equals(existing, sha, StringComparison.OrdinalIgnoreCase)) return 0;
         }
 
-        using var document = JsonDocument.Parse(bytes);
-        if (document.RootElement.ValueKind != JsonValueKind.Object) return 0;
-
-        var metadata = new Dictionary<string, OplMetadata>(StringComparer.OrdinalIgnoreCase);
-        foreach (var property in document.RootElement.EnumerateObject())
-        {
-            if (property.Value.ValueKind != JsonValueKind.Object) continue;
-            var item = property.Value;
-            metadata[property.Name] = new OplMetadata(
-                Read(item, "description"),
-                Read(item, "genre"),
-                Read(item, "developer"));
-        }
-
+        var metadata = ParseMetadata(bytes);
         var chosen = new Dictionary<string, OplMetadata>(StringComparer.OrdinalIgnoreCase);
         await using (var cmd = db.CreateCommand())
         {
@@ -127,10 +117,61 @@ ON CONFLICT(StateKey) DO UPDATE SET StateValue=excluded.StateValue,UpdatedUtc=ex
         return changed;
     }
 
+    public static MetadataLookup FindBestForSerials(string metadataPath, IEnumerable<string> serials)
+    {
+        var metadata = GetCachedMetadata(metadataPath);
+        var best = new OplMetadata(string.Empty, string.Empty, string.Empty);
+        foreach (var rawSerial in serials)
+        {
+            var serial = NormalizeSerial(rawSerial);
+            if (serial.Length == 0 || !metadata.TryGetValue(serial, out var candidate)) continue;
+            best = best.MergeMissing(candidate);
+            if (!string.IsNullOrWhiteSpace(best.Description) && !string.IsNullOrWhiteSpace(best.Genre) && !string.IsNullOrWhiteSpace(best.Developer)) break;
+        }
+        return new MetadataLookup(best.Description, best.Genre, best.Developer);
+    }
+
+    private static Dictionary<string, OplMetadata> GetCachedMetadata(string metadataPath)
+    {
+        if (!File.Exists(metadataPath)) return new Dictionary<string, OplMetadata>(StringComparer.OrdinalIgnoreCase);
+        var fullPath = Path.GetFullPath(metadataPath);
+        lock (CacheLock)
+        {
+            if (_cachedMetadata is not null && string.Equals(_cachedPath, fullPath, StringComparison.OrdinalIgnoreCase)) return _cachedMetadata;
+            _cachedMetadata = ParseMetadata(File.ReadAllBytes(fullPath));
+            _cachedPath = fullPath;
+            return _cachedMetadata;
+        }
+    }
+
+    private static Dictionary<string, OplMetadata> ParseMetadata(byte[] bytes)
+    {
+        var metadata = new Dictionary<string, OplMetadata>(StringComparer.OrdinalIgnoreCase);
+        using var document = JsonDocument.Parse(bytes);
+        if (document.RootElement.ValueKind != JsonValueKind.Object) return metadata;
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.Object) continue;
+            var item = property.Value;
+            metadata[property.Name] = new OplMetadata(
+                Read(item, "description"),
+                Read(item, "genre"),
+                Read(item, "developer"));
+        }
+        return metadata;
+    }
+
+    private static string NormalizeSerial(string? value)
+        => string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+
     private static string Read(JsonElement item, string name)
         => item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()?.Trim() ?? string.Empty
             : string.Empty;
+
+    internal sealed record MetadataLookup(string Description, string Genre, string Developer);
 
     private sealed record OplMetadata(string Description, string Genre, string Developer)
     {
