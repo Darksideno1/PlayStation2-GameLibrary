@@ -92,6 +92,14 @@ AND NOT EXISTS (SELECT 1 FROM Release r WHERE r.GameId=g.GameId AND r.RegionCode
 AND NOT EXISTS (SELECT 1 FROM Release r JOIN ReleaseLanguage rl ON rl.ReleaseId=r.ReleaseId WHERE r.GameId=g.GameId AND LOWER(rl.LanguageCode) IN ('english','en','eng'))";
             if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 0)
                 throw new Exception("JP/KR-only games without English were not excluded.");
+
+            cmd.CommandText = @"SELECT COUNT(*) FROM Game g
+JOIN Release r ON r.GameId=g.GameId
+JOIN Disc d ON d.ReleaseId=r.ReleaseId
+WHERE g.CanonicalTitle='Taxi 3' COLLATE NOCASE AND d.SerialRaw='SLES-51377'";
+            cmd.Parameters.Clear();
+            if (Convert.ToInt64(await cmd.ExecuteScalarAsync()) != 1)
+                throw new Exception("PAL-only special title Taxi 3 / SLES-51377 was lost by the full-catalog policy.");
         }
 
         cmd.CommandText = "SELECT GameId FROM Game ORDER BY SortTitle LIMIT 1";
@@ -136,7 +144,7 @@ VALUES($copy,'Collector Edition','Yes','Yes','Yes','No','Very Good',$now)";
             throw new Exception("Catalogue changed after reopening database.");
     }
 
-    Console.WriteLine($"PASS: {initialGames:N0} conceptual games / {initialReleases:N0} releases -> multi-release checks -> collection persistence.");
+    Console.WriteLine($"PASS: {initialGames:N0} conceptual games / {initialReleases:N0} releases -> multi-release + Taxi 3 checks -> collection persistence.");
 }
 finally
 {
