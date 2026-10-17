@@ -34,10 +34,10 @@ jobs:
           path: dist/PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_PORTABLE.zip
           if-no-files-found: error
 
-      - name: Upload Windows UI screenshot
+      - name: Upload Windows UI screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: PS2_WINDOWS_UI_SCREENSHOT
-          path: tests/WindowsGuiSmoke/catalogue-screenshot.png
+          name: PS2_WINDOWS_UI_SCREENSHOTS
+          path: tests/WindowsGuiSmoke/*-screenshot.png
           if-no-files-found: ignore
