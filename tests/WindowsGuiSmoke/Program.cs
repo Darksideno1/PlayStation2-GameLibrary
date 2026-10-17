@@ -27,9 +27,11 @@ var staThread = new System.Threading.Thread(() =>
             if (completed) return;
             try
             {
-                if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load within 90 seconds.");
+                if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load the full catalogue within 90 seconds.");
                 var grid = (DataGrid)window.FindName("GamesGrid");
-                if (grid.Items.Count < 100) return;
+                // The bundled development seed contains well over 3,000 games. Waiting for
+                // this threshold proves the old LIMIT 2000 catalogue query is no longer active.
+                if (grid.Items.Count < 3000) return;
                 timer.Stop();
                 window.UpdateLayout();
                 var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
@@ -96,7 +98,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("Add to Collection did not persist through UI.");
                     completed = true;
-                    Console.WriteLine("PASS: Catalog opens Game Details inline, returns to Catalog, adds a collection copy and persists it to SQLite.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games (>2,000), opens Game Details inline, returns to Catalog, adds a collection copy and persists it to SQLite.");
                 }
                 window.Close();
             }
