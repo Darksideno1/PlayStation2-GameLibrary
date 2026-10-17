@@ -8,5 +8,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11"/>
     <Compile Include="../../src/PlayStation2GameLibrary/GameDbJsonImportService.cs" Link="GameDbJsonImportService.cs"/>
+    <Compile Include="../../src/PlayStation2GameLibrary/StarterCatalogue.cs" Link="StarterCatalogue.cs"/>
   </ItemGroup>
 </Project>
