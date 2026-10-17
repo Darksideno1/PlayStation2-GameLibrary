@@ -7,13 +7,11 @@ import json
 import re
 from pathlib import Path
 
-ENGLISH = {"en", "eng", "english"}
 US = {"u", "us", "usa", "northamerica", "north america", "ntsc-u", "ntsc-u/c"}
 PAL = {"e", "eu", "europe", "pal", "europe/pal", "australia", "au"}
 JP = {"j", "jp", "japan", "ntsc-j"}
 KR = {"k", "kr", "kor", "korea", "south korea"}
 
-# Diagnostic patterns. The importer can later expose these in a rejected/review list.
 NON_GAME_PATTERNS = [
     r"\bdemo\b", r"\bsampler\b", r"\bpreview\b", r"\btrial\b", r"\btaikenban\b",
     r"tentou shiyuu", r"magazine", r"buyers guide", r"players guide", r"yearbook",
@@ -22,6 +20,7 @@ NON_GAME_PATTERNS = [
     r"\bps2\s+linux\b", r"linux \(for playstation 2\)", r"manufacturing", r"seizou kensa",
     r"\bkiosk\b", r"\bbonus\s+disc\b", r"\bbonus\s+demo\b",
 ]
+DISC_SUFFIX = re.compile(r"\s*(?:[-:–]\s*)?[\(\[]?\s*(?:disc|disk)\s*(?:no\.?\s*)?(?:[0-9]+|[ivx]+)\s*[\)\]]?\s*$", re.I)
 
 
 def text(value) -> str:
@@ -36,8 +35,14 @@ def serial_key(value: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", value.upper())
 
 
+def conceptual_title(value: str) -> str:
+    original = value.strip()
+    cleaned = DISC_SUFFIX.sub("", original).rstrip(" -:–").strip()
+    return cleaned or original
+
+
 def title_key(value: str) -> str:
-    value = value.casefold().strip()
+    value = conceptual_title(value).casefold().strip()
     value = re.sub(r"[™®©]", "", value)
     value = re.sub(r"\s+", " ", value)
     return value
@@ -70,10 +75,6 @@ def bucket(record: dict) -> str:
     if value in KR:
         return "Korea"
     return text(record.get("region")) or "Unknown"
-
-
-def has_english(record: dict) -> bool:
-    return any(x.casefold() in ENGLISH for x in languages(record))
 
 
 def is_clear_non_game(record: dict) -> bool:
@@ -117,29 +118,19 @@ def main() -> None:
     array_language_count = sum(isinstance(x.get("language", x.get("languages")), list) for x in records)
     missing_language_count = sum(not languages(x) for x in records)
     clear_non_game = [x for x in records if is_clear_non_game(x)]
-    jp_kr = [x for x in records if bucket(x) in {"NTSC-J", "Korea"}]
-    jp_kr_no_en = [x for x in jp_kr if not has_english(x)]
 
     serial_region = collections.Counter((serial_key(text(x.get("serial"))), bucket(x)) for x in records if text(x.get("serial")))
     duplicate_serial_region = [(key, n) for key, n in serial_region.items() if n > 1]
 
-    candidate = [
-        x for x in records
-        if text(x.get("title"))
-        and text(x.get("serial"))
-        and not is_clear_non_game(x)
-        and not (bucket(x) in {"NTSC-J", "Korea"} and not has_english(x))
-    ]
+    candidate = [x for x in records if text(x.get("title")) and text(x.get("serial")) and not is_clear_non_game(x)]
     candidate_titles: dict[str, list[dict]] = collections.defaultdict(list)
     for x in candidate:
         candidate_titles[title_key(text(x.get("title")))].append(x)
     primaries = [min(group, key=primary_rank) for group in candidate_titles.values()]
     primary_regions = collections.Counter(bucket(x) for x in primaries)
 
-    san_andreas = [
-        x for x in records
-        if title_key(text(x.get("title"))) == title_key("Grand Theft Auto: San Andreas")
-    ]
+    san_andreas = [x for x in records if title_key(text(x.get("title"))) == title_key("Grand Theft Auto: San Andreas")]
+    zero_story = [x for x in records if title_key(text(x.get("title"))) == title_key("0 Story")]
 
     lines = [
         "PLAYSTATION 2 GAME LIBRARY - OFFICIAL FULL GAMEDB VALIDATION",
@@ -148,8 +139,8 @@ def main() -> None:
         "",
         "RAW OFFICIAL SOURCE",
         f"Release records: {len(records):,}",
-        f"Distinct exact normalized titles: {len(by_title):,}",
-        f"Titles represented by multiple releases: {sum(len(v) > 1 for v in by_title.values()):,}",
+        f"Distinct conceptual-title keys (Disc N suffix normalized): {len(by_title):,}",
+        f"Conceptual titles represented by multiple source releases: {sum(len(v) > 1 for v in by_title.values()):,}",
         f"Language field is an array: {array_language_count:,}",
         f"Records without language evidence: {missing_language_count:,}",
         f"Duplicate normalized serial+region pairs: {len(duplicate_serial_region):,}",
@@ -157,8 +148,8 @@ def main() -> None:
         "REGIONS",
     ]
     lines.extend(f"{k}: {v:,}" for k, v in region_counts.most_common())
-    lines += ["", "LANGUAGES (top 25)"]
-    lines.extend(f"{k}: {v:,}" for k, v in language_counts.most_common(25))
+    lines += ["", "LANGUAGES (top 30)"]
+    lines.extend(f"{k}: {v:,}" for k, v in language_counts.most_common(30))
     lines += ["", "GENRES (top 25)"]
     lines.extend(f"{k}: {v:,}" for k, v in genre_counts.most_common(25))
     lines += ["", "SERIAL PREFIXES (top 30)"]
@@ -166,23 +157,26 @@ def main() -> None:
 
     lines += [
         "",
-        "POLICY PREVIEW",
+        "ALL-LANGUAGE CATALOG POLICY PREVIEW",
         f"Clear demo/system/utility/etc. records flagged: {len(clear_non_game):,}",
-        f"JP/KR release records: {len(jp_kr):,}",
-        f"JP/KR release records without English: {len(jp_kr_no_en):,}",
         f"Candidate accepted release records: {len(candidate):,}",
-        f"Candidate conceptual games by exact normalized title: {len(candidate_titles):,}",
+        f"Candidate conceptual games: {len(candidate_titles):,}",
         f"Candidate conceptual games with multiple releases: {sum(len(v) > 1 for v in candidate_titles.values()):,}",
-        "Primary release region preview (NTSC-U/C > PAL > JP/KR):",
+        "Language is now a filter, not a destructive import rule.",
+        "Preferred release region preview (used internally for cover preference only):",
     ]
     lines.extend(f"  {k}: {v:,}" for k, v in primary_regions.most_common())
 
     lines += ["", "SAN ANDREAS MULTI-RELEASE CHECK"]
-    if san_andreas:
-        for row in sorted(san_andreas, key=primary_rank):
-            lines.append(f"- {text(row.get('serial'))} | {bucket(row)} | {', '.join(languages(row)) or 'no language'}")
+    for row in sorted(san_andreas, key=primary_rank):
+        lines.append(f"- {text(row.get('serial'))} | {bucket(row)} | {', '.join(languages(row)) or 'no language'}")
+
+    lines += ["", "0 STORY MULTI-DISC / JAPANESE-ONLY CHECK"]
+    if zero_story:
+        for row in sorted(zero_story, key=primary_rank):
+            lines.append(f"- {text(row.get('serial'))} | {text(row.get('title'))} | {bucket(row)} | {', '.join(languages(row)) or 'no language'}")
     else:
-        lines.append("ERROR: Grand Theft Auto: San Andreas not found")
+        lines.append("ERROR: 0 Story not found")
 
     lines += ["", "SAMPLE FLAGGED NON-GAME/DEMO RECORDS"]
     for row in clear_non_game[:50]:
@@ -192,22 +186,25 @@ def main() -> None:
         "",
         "NOTES",
         "- This is a validation report only; it never writes catalogue.db.",
-        "- Exact-title grouping is a safe first pass, not the final merge strategy for every localized title.",
-        "- ADMIN Merge/Split remains the safety mechanism for edge cases.",
-        "- The production importer must store every language from a source array as a separate ReleaseLanguage row.",
+        "- Disc 1 / Disc 2 suffixes are normalized for conceptual-game grouping.",
+        "- Localized titles can still require ADMIN Merge/Split.",
+        "- Every source language must be stored as its own ReleaseLanguage row.",
+        "- Exact serials remain release/disc identifiers, not conceptual-game IDs.",
     ]
 
     report = "\n".join(lines) + "\n"
     print(report, end="")
     args.report.write_text(report, encoding="utf-8")
 
-    # Hard checks that protect us from accidentally validating the old flattened seed.
     if len(records) < 5000:
         raise SystemExit(f"Official source looks incomplete: only {len(records)} release records")
     san_serials = {text(x.get("serial")).upper() for x in san_andreas}
     expected = {"SLES-52541", "SLES-52927", "SLUS-20946"}
     if not expected.issubset(san_serials):
         raise SystemExit(f"Official source is missing expected San Andreas releases: {sorted(expected - san_serials)}")
+    zero_serials = {text(x.get("serial")).upper() for x in zero_story}
+    if not {"SLPM-65002", "SLPM-65003"}.issubset(zero_serials):
+        raise SystemExit("Official source is missing expected 0 Story full-game disc serials")
     if array_language_count == 0:
         raise SystemExit("Official source unexpectedly contains no array-valued language fields")
 
