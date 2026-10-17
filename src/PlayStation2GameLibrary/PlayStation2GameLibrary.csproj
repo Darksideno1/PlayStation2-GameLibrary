@@ -21,5 +21,6 @@
     <Content Include="../../data/NOTICE.md" Link="data/NOTICE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../data/GPL-3.0.txt" Link="data/GPL-3.0.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../data/GameDB-PS2.seed.json" Link="data/GameDB-PS2.seed.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../data/OPL.metadata.json" Link="data/OPL.metadata.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('../../data/OPL.metadata.json')" />
   </ItemGroup>
 </Project>
