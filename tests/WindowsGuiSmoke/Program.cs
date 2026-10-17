@@ -67,6 +67,8 @@ var staThread = new System.Threading.Thread(() =>
                     throw new Exception("Approved Game Details Quick Facts card is missing.");
                 if (!allText.Any(x => string.Equals(x.Text, "Physical copies", StringComparison.Ordinal)))
                     throw new Exception("Approved Game Details collection summary is missing.");
+                if (!allText.Any(x => string.Equals(x.Text, "Linked releases", StringComparison.Ordinal)))
+                    throw new Exception("Game Details must describe linked releases instead of exposing a primary release serial.");
 
                 CaptureWindow(window, "game-details-screenshot.png");
 
@@ -84,7 +86,10 @@ var staThread = new System.Threading.Thread(() =>
                         if (DateTime.UtcNow > deadline) throw new TimeoutException("Complete Add to Collection dialog timed out.");
                         var addDialog = Application.Current.Windows.OfType<AddCollectionEntryWindow>().FirstOrDefault();
                         if (addDialog is null) return;
-                        var releaseBox = FindVisualChildren<ComboBox>(addDialog).FirstOrDefault(x => x.Items.Count > 0);
+                        if (!FindVisualChildren<DatePicker>(addDialog).Any()) return;
+                        var comboBoxes = FindVisualChildren<ComboBox>(addDialog).ToList();
+                        if (!comboBoxes.Any(box => box.Items.Cast<object>().Any(x => string.Equals(x?.ToString(), "ZSO", StringComparison.OrdinalIgnoreCase)))) return;
+                        var releaseBox = comboBoxes.FirstOrDefault(x => x.Items.Count > 0 && x.SelectedItem is not string);
                         if (releaseBox?.SelectedItem is null) return;
                         if (!saved)
                         {
@@ -118,7 +123,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("One-step Add to Collection did not save copy details.");
                     completed = true;
-                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} conceptual games with dynamic language filters, approved Game Details opens inline, and one-step Add persists copy + details.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} conceptual games, linked-release Game Details opens inline, Add has calendar + format selector, and one-step persistence works.");
                 }
                 window.Close();
             }
