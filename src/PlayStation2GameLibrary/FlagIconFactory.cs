@@ -21,8 +21,8 @@ internal static class FlagIconFactory
             "pt" or "por" or "portuguese" => "pt",
             "sv" or "swe" or "swedish" => "se",
             "fi" or "fin" or "finnish" => "fi",
-            "da" or "dan" or "danish" => "dk",
-            "no" or "nor" or "norwegian" => "no",
+            "da" or "dan" or "danish" or "danks" => "dk",
+            "no" or "nor" or "norwegian" or "norweigan" => "no",
             "pl" or "pol" or "polish" => "pl",
             "ru" or "rus" or "russian" => "ru",
             "el" or "ell" or "gre" or "greek" => "gr",
@@ -121,8 +121,8 @@ internal static class FlagIconFactory
             case "cz":
                 AddRect(group, 0, 0, 36, 12, Colors.White);
                 AddRect(group, 0, 12, 36, 12, Color.FromRgb(215, 20, 26));
-                group.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromRgb(17, 69, 126)), null,
-                    new PathGeometry(new[] { new PathFigure(new Point(0, 0), new[] { new LineSegment(new Point(15, 12), true), new LineSegment(new Point(0, 24), true) }, true) }))));
+                // Compact blue wedge approximation that remains crisp at 22–27 px display widths.
+                AddRect(group, 0, 0, 9, 24, Color.FromRgb(17, 69, 126));
                 break;
             default: // EU/PAL visual
                 AddRect(group, 0, 0, 36, 24, Color.FromRgb(23, 71, 166));
@@ -144,25 +144,33 @@ internal static class FlagIconFactory
 
     private static void AddHorizontalTricolor(DrawingGroup group, Color a, Color b, Color c)
     {
-        AddRect(group, 0, 0, 36, 8, a); AddRect(group, 0, 8, 36, 8, b); AddRect(group, 0, 16, 36, 8, c);
+        AddRect(group, 0, 0, 36, 8, a);
+        AddRect(group, 0, 8, 36, 8, b);
+        AddRect(group, 0, 16, 36, 8, c);
     }
 
     private static void AddVerticalTricolor(DrawingGroup group, Color a, Color b, Color c)
     {
-        AddRect(group, 0, 0, 12, 24, a); AddRect(group, 12, 0, 12, 24, b); AddRect(group, 24, 0, 12, 24, c);
+        AddRect(group, 0, 0, 12, 24, a);
+        AddRect(group, 12, 0, 12, 24, b);
+        AddRect(group, 24, 0, 12, 24, c);
     }
 
     private static void AddNordicCross(DrawingGroup group, Color background, Color cross)
     {
-        AddRect(group, 0, 0, 36, 24, background); AddRect(group, 11, 0, 5, 24, cross); AddRect(group, 0, 9.5, 36, 5, cross);
+        AddRect(group, 0, 0, 36, 24, background);
+        AddRect(group, 11, 0, 5, 24, cross);
+        AddRect(group, 0, 9.5, 36, 5, cross);
     }
 
     private static void AddNordicLikeCross(DrawingGroup group, Color background, Color outer, Color inner, bool centered)
     {
         AddRect(group, 0, 0, 36, 24, background);
         var x = centered ? 15d : 10d;
-        AddRect(group, x - 2, 0, 7, 24, outer); AddRect(group, 0, 8.5, 36, 7, outer);
-        AddRect(group, x, 0, 3, 24, inner); AddRect(group, 0, 10.5, 36, 3, inner);
+        AddRect(group, x - 2, 0, 7, 24, outer);
+        AddRect(group, 0, 8.5, 36, 7, outer);
+        AddRect(group, x, 0, 3, 24, inner);
+        AddRect(group, 0, 10.5, 36, 3, inner);
     }
 
     private static void AddRect(DrawingGroup group, double x, double y, double width, double height, Color color) =>
