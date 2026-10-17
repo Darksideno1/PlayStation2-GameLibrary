@@ -212,7 +212,7 @@ d.DiscNumber";
                 publisher.Text = publishers.Length == 0 ? "—" : string.Join(", ", publishers.Take(4));
             }
 
-            await using (var db = new SqliteConnection($"Data Source={_databasePath};Mode=ReadOnly"))
+            await using (var db = new SqliteConnection($"Data Source={_databasePath}"))
             {
                 await db.OpenAsync();
                 await MetadataEnrichmentService.EnsureSchemaAsync(db);
