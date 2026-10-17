@@ -48,12 +48,32 @@ internal static class AddCollectionEntryEnhancementsBootstrap
             Language = XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag),
             ToolTip = "Choose the purchase date from the calendar. This field is optional."
         };
-        if (DateTime.TryParse(source.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var existing)
-            || DateTime.TryParse(source.Text, CultureInfo.CurrentCulture, DateTimeStyles.None, out existing))
-            picker.SelectedDate = existing;
+        var syncing = false;
 
+        void SyncPickerFromText()
+        {
+            if (syncing) return;
+            syncing = true;
+            try
+            {
+                if (DateTime.TryParse(source.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+                    || DateTime.TryParse(source.Text, CultureInfo.CurrentCulture, DateTimeStyles.None, out parsed))
+                    picker.SelectedDate = parsed;
+                else if (string.IsNullOrWhiteSpace(source.Text))
+                    picker.SelectedDate = null;
+            }
+            finally { syncing = false; }
+        }
+
+        SyncPickerFromText();
+        source.TextChanged += (_, _) => SyncPickerFromText();
         picker.SelectedDateChanged += (_, _) =>
-            source.Text = picker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+        {
+            if (syncing) return;
+            syncing = true;
+            try { source.Text = picker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty; }
+            finally { syncing = false; }
+        };
 
         source.Visibility = Visibility.Collapsed;
         parent.Children.Insert(index + 1, picker);
@@ -72,11 +92,28 @@ internal static class AddCollectionEntryEnhancementsBootstrap
             ItemsSource = new[] { "ISO", "ZSO", "BIN/CUE", "CHD", "MDF/MDS", "NRG", "UL", "Other" },
             ToolTip = "Choose a common digital format or type another value."
         };
+        var syncing = false;
         selector.Text = string.IsNullOrWhiteSpace(source.Text) ? "ISO" : source.Text;
         source.Text = selector.Text;
-        selector.SelectionChanged += (_, _) => source.Text = selector.Text.Trim();
-        selector.LostKeyboardFocus += (_, _) => source.Text = selector.Text.Trim();
-        selector.AddHandler(TextBox.TextChangedEvent, new TextChangedEventHandler((_, _) => source.Text = selector.Text.Trim()));
+
+        void SyncSourceFromSelector()
+        {
+            if (syncing) return;
+            syncing = true;
+            try { source.Text = selector.Text.Trim(); }
+            finally { syncing = false; }
+        }
+
+        source.TextChanged += (_, _) =>
+        {
+            if (syncing) return;
+            syncing = true;
+            try { selector.Text = string.IsNullOrWhiteSpace(source.Text) ? "ISO" : source.Text; }
+            finally { syncing = false; }
+        };
+        selector.SelectionChanged += (_, _) => SyncSourceFromSelector();
+        selector.LostKeyboardFocus += (_, _) => SyncSourceFromSelector();
+        selector.AddHandler(TextBox.TextChangedEvent, new TextChangedEventHandler((_, _) => SyncSourceFromSelector()));
 
         source.Visibility = Visibility.Collapsed;
         parent.Children.Insert(index + 1, selector);
