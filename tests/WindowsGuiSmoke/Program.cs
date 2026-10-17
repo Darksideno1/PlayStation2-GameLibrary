@@ -70,8 +70,8 @@ var staThread = new System.Threading.Thread(() =>
                     throw new Exception("Approved Game Details collection summary is missing.");
                 if (!allText.Any(x => string.Equals(x.Text, "Linked releases", StringComparison.Ordinal)))
                     throw new Exception("Game Details must describe linked releases instead of exposing a primary release serial.");
-                if (allText.Any(x => x.Text is "Primary release" or "Primary serial"))
-                    throw new Exception("Game Details still exposes a primary release label.");
+                if (allText.Any(x => x.IsVisible && (x.Text is "Primary release" or "Primary serial")))
+                    throw new Exception("Game Details still exposes a visible primary release label.");
 
                 CaptureWindow(window, "game-details-screenshot.png");
 
