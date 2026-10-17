@@ -9,6 +9,11 @@ $Zip = Join-Path $Dist 'PLAYSTATION_2_GAME_LIBRARY_v0.1_BETA_PORTABLE.zip'
 $FullSource = Join-Path $ProjectRoot 'data/PS2.data.full.json'
 $FullSourceUrl = 'https://github.com/niemasd/GameDB-PS2/releases/download/2026-07-16_20-23-50/PS2.data.json'
 $FullSourceSha256 = '471613adebaf40080ab9e96029fb10fea92bbe6a1af33724690e274e7235d9b8'
+$OplCommit = '7dc9204ac8f78f5ec5304fcc9759080598b487a4'
+$OplArchive = Join-Path $ProjectRoot 'data/OPL-CFG-source.zip'
+$OplExtract = Join-Path $ProjectRoot 'data/OPL-CFG-source'
+$OplMetadata = Join-Path $ProjectRoot 'data/OPL.metadata.json'
+$OplArchiveUrl = "https://github.com/Thecat1080/PS2-OPL-CFG-Database/archive/$OplCommit.zip"
 if (-not $IsWindows -and $env:OS -ne 'Windows_NT') { throw 'Run this release script on Windows 10/11.' }
 if (-not (Test-Path $Project)) { throw "Project file not found: $Project" }
 $dotnetCommand = Get-Command dotnet -ErrorAction SilentlyContinue
@@ -35,6 +40,16 @@ try {
     $actualHash = (Get-FileHash -Path $FullSource -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualHash -ne $FullSourceSha256) { throw "Official GameDB source SHA256 mismatch. Expected $FullSourceSha256, got $actualHash" }
 
+    Write-Host "Downloading pinned OPL CFG metadata source for descriptions and genres..."
+    Invoke-WebRequest -Uri $OplArchiveUrl -OutFile $OplArchive -UseBasicParsing
+    if (Test-Path $OplExtract) { Remove-Item $OplExtract -Recurse -Force }
+    Expand-Archive -Path $OplArchive -DestinationPath $OplExtract -Force
+    $cfgDir = Get-ChildItem -Path $OplExtract -Directory -Recurse | Where-Object { $_.Name -eq 'CFG_en' } | Select-Object -First 1
+    if (-not $cfgDir) { throw 'Pinned OPL metadata archive does not contain CFG_en.' }
+    & $pythonCommand @pythonPrefixArgs scripts/build_opl_metadata.py --cfg-dir $cfgDir.FullName --output $OplMetadata
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $OplMetadata)) { throw 'OPL metadata map generation failed.' }
+    $oplRoot = Split-Path -Parent $cfgDir.FullName
+
     & $pythonCommand @pythonPrefixArgs -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & $pythonCommand @pythonPrefixArgs tests/validate_static.py
@@ -59,9 +74,8 @@ try {
         $seedTarget = Join-Path $output 'data'
         New-Item -ItemType Directory -Path $seedTarget -Force | Out-Null
         Copy-Item $FullSource (Join-Path $seedTarget 'PS2.data.full.json') -Force
-        # MainWindow and ADMIN both call StarterCatalogue with data/starter-catalog.json.
-        # In release builds that name intentionally points at the pinned full multi-release source.
         Copy-Item $FullSource (Join-Path $seedTarget 'starter-catalog.json') -Force
+        Copy-Item $OplMetadata (Join-Path $seedTarget 'OPL.metadata.json') -Force
         Copy-Item (Join-Path $ProjectRoot 'data/GameDB-PS2.seed.json') (Join-Path $seedTarget 'GameDB-PS2.seed.json') -Force
     }
 
@@ -75,6 +89,15 @@ try {
     }
     Copy-Item 'docs/PORTABLE_USER_GUIDE.md' $Stage -Force
     Copy-Item 'docs/WINDOWS_FIRST_BUILD_AND_TEST.md' $Stage -Force
+    if (Test-Path (Join-Path $oplRoot 'LICENSE')) { Copy-Item (Join-Path $oplRoot 'LICENSE') (Join-Path $Stage 'OPL_CFG_METADATA_LICENSE_GPL-3.0.txt') -Force }
+    @"
+Third-party catalogue metadata sources
+=====================================
+Game/release/serial/region/language base: GameDB-PS2 pinned release.
+Description/genre enrichment: The Open PS2 Loader CFG Database, pinned commit $OplCommit.
+The OPL CFG project states that its metadata was enriched from ScreenScraper.fr and is distributed under GPL-3.0.
+Only English CFG metadata is used, matched to games by normalized PS2 serial. Missing metadata remains blank rather than being invented.
+"@ | Set-Content (Join-Path $Stage 'THIRD_PARTY_METADATA.txt') -Encoding UTF8
     @'
 PLAYSTATION 2 GAME LIBRARY v0.1 BETA
 Extract the entire archive before running it.
@@ -83,6 +106,7 @@ USER and ADMIN share the package-level Data, Config and Media folders.
 The program no longer reuses the old %LOCALAPPDATA% test database by default.
 The portable build contains a pinned, SHA256-verified official GameDB-PS2 full-source snapshot.
 A fresh portable Data/catalogue.db is seeded from that full source on first launch.
+English descriptions and genres are enriched from a pinned OPL CFG metadata snapshot where a serial match exists.
 '@ | Set-Content (Join-Path $Stage 'START_HERE.txt') -Encoding UTF8
 
     Compress-Archive -Path (Join-Path $Stage '*') -DestinationPath $Zip -CompressionLevel Optimal -Force
@@ -90,12 +114,13 @@ A fresh portable Data/catalogue.db is seeded from that full source on first laun
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/PS2.data.full.json','ADMIN/data/PS2.data.full.json','USER/data/starter-catalog.json','ADMIN/data/starter-catalog.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/PS2.data.full.json','ADMIN/data/PS2.data.full.json','USER/data/starter-catalog.json','ADMIN/data/starter-catalog.json','USER/data/OPL.metadata.json','ADMIN/data/OPL.metadata.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt','THIRD_PARTY_METADATA.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
     Write-Host "Portable package created: $Zip"
 } finally {
-    if (Test-Path $FullSource) { Remove-Item $FullSource -Force -ErrorAction SilentlyContinue }
+    foreach ($path in @($FullSource,$OplArchive,$OplMetadata)) { if (Test-Path $path) { Remove-Item $path -Force -ErrorAction SilentlyContinue } }
+    if (Test-Path $OplExtract) { Remove-Item $OplExtract -Recurse -Force -ErrorAction SilentlyContinue }
     Pop-Location
 }
