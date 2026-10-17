@@ -12,13 +12,16 @@ using Microsoft.Data.Sqlite;
 namespace PlayStation2GameLibrary;
 
 /// <summary>
-/// Complete one-step Add to Collection dialog. All metadata required for a new
-/// Physical or Digital copy is entered before the copy is created.
+/// Complete one-step Add/Edit collection dialog. Physical or Digital metadata is
+/// saved together with the copy, so a second "Detailed inventory" step is not required.
 /// </summary>
 public sealed class AddCollectionEntryWindow : Window
 {
     private readonly string _dbPath;
     private readonly string _gameId;
+    private readonly string? _copyId;
+    private bool IsEdit => !string.IsNullOrWhiteSpace(_copyId);
+
     private readonly ComboBox _release = new() { MinWidth = 430, Height = 38 };
     private readonly RadioButton _physical = new() { Content = "Physical", IsChecked = true, GroupName = "CopyType", Margin = new Thickness(0, 0, 16, 0) };
     private readonly RadioButton _digital = new() { Content = "Digital", GroupName = "CopyType" };
@@ -37,11 +40,12 @@ public sealed class AddCollectionEntryWindow : Window
     private readonly TextBlock _status = new() { Foreground = Brush("#60758D"), TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _title = new() { FontSize = 25, FontWeight = FontWeights.Bold, Foreground = Brush("#10243F"), TextWrapping = TextWrapping.Wrap };
 
-    public AddCollectionEntryWindow(string dbPath, string gameId)
+    public AddCollectionEntryWindow(string dbPath, string gameId, string? copyId = null)
     {
         _dbPath = dbPath;
         _gameId = gameId;
-        Title = "Add to Collection — PLAYSTATION 2 GAME LIBRARY";
+        _copyId = copyId;
+        Title = IsEdit ? "Edit Collection Entry — PLAYSTATION 2 GAME LIBRARY" : "Add to Collection — PLAYSTATION 2 GAME LIBRARY";
         Width = 760;
         Height = 790;
         MinWidth = 650;
@@ -73,7 +77,7 @@ public sealed class AddCollectionEntryWindow : Window
         var cancel = Button("Cancel", false);
         cancel.Click += (_, _) => Close();
         actions.Children.Add(cancel);
-        var save = Button("Add to Collection", true);
+        var save = Button(IsEdit ? "Save Changes" : "Add to Collection", true);
         save.Margin = new Thickness(8, 0, 0, 0);
         save.Click += async (_, _) => await SaveAsync();
         actions.Children.Add(save);
@@ -83,13 +87,23 @@ public sealed class AddCollectionEntryWindow : Window
         var content = new StackPanel();
         scroll.Content = content;
 
-        content.Children.Add(new TextBlock { Text = "ADD TO COLLECTION", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brush("#1264BD") });
+        content.Children.Add(new TextBlock
+        {
+            Text = IsEdit ? "EDIT COLLECTION ENTRY" : "ADD TO COLLECTION",
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brush("#1264BD")
+        });
         _title.Margin = new Thickness(0, 6, 0, 4);
         content.Children.Add(_title);
         content.Children.Add(new TextBlock
         {
-            Text = "Create the complete collection entry now. You will only need Edit later if something changes.",
-            Foreground = Brush("#60758D"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16)
+            Text = IsEdit
+                ? "Update this copy in one place. Release, ownership type and all copy details are saved together."
+                : "Create the complete collection entry now. You will only need Edit later if something changes.",
+            Foreground = Brush("#60758D"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 16)
         });
 
         content.Children.Add(Card(Section("Release", "Choose the exact regional release / serial for this copy.", _release)));
@@ -154,7 +168,7 @@ public sealed class AddCollectionEntryWindow : Window
             {
                 titleCmd.CommandText = "SELECT CanonicalTitle FROM Game WHERE GameId=$id";
                 titleCmd.Parameters.AddWithValue("$id", _gameId);
-                _title.Text = Convert.ToString(await titleCmd.ExecuteScalar()) ?? "Game";
+                _title.Text = Convert.ToString(await titleCmd.ExecuteScalarAsync()) ?? "Game";
             }
 
             var choices = new List<ReleaseChoice>();
@@ -178,19 +192,73 @@ r.ReleaseYear";
             _release.ItemsSource = choices;
             _release.ItemTemplate = ReleaseTemplate();
             _release.SelectedIndex = choices.Count > 0 ? 0 : -1;
-            _status.Text = choices.Count > 0 ? $"{choices.Count} release(s) available." : "No release is available for this game.";
+
+            if (IsEdit)
+                await LoadExistingAsync(db, choices);
+
+            _status.Text = IsEdit
+                ? "Existing copy loaded. Change any fields and save once."
+                : choices.Count > 0 ? $"{choices.Count} release(s) available." : "No release is available for this game.";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Add to Collection", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, ex.Message, IsEdit ? "Edit Collection Entry" : "Add to Collection", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private async Task LoadExistingAsync(SqliteConnection db, IReadOnlyList<ReleaseChoice> choices)
+    {
+        await using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT COALESCE(ReleaseId,''),CopyType,COALESCE(Condition,''),COALESCE(StorageLocation,''),DigitalSizeBytes,COALESCE(Notes,'')
+FROM CollectionCopy WHERE CopyId=$copy";
+            cmd.Parameters.AddWithValue("$copy", _copyId!);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync())
+                throw new InvalidOperationException("The selected collection copy no longer exists.");
+
+            var releaseId = reader.GetString(0);
+            var selectedChoice = choices.FirstOrDefault(x => x.ReleaseId == releaseId);
+            if (selectedChoice is not null) _release.SelectedItem = selectedChoice;
+
+            var type = reader.GetString(1);
+            _physical.IsChecked = string.Equals(type, "Physical", StringComparison.OrdinalIgnoreCase);
+            _digital.IsChecked = string.Equals(type, "Digital", StringComparison.OrdinalIgnoreCase);
+            if (_physical.IsChecked != true && _digital.IsChecked != true) _physical.IsChecked = true;
+
+            var condition = reader.GetString(2);
+            if (!string.IsNullOrWhiteSpace(condition) && _condition.Items.Contains(condition)) _condition.SelectedItem = condition;
+            _storage.Text = reader.GetString(3);
+            if (!reader.IsDBNull(4))
+                _digitalSize.Text = (reader.GetInt64(4) / 1_000_000_000m).ToString("0.###", CultureInfo.CurrentCulture);
+            _notes.Text = reader.GetString(5);
+        }
+
+        await using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT CoverPresent,CasePresent,DiscPresent,ManualPresent,COALESCE(DigitalFormat,''),COALESCE(PurchaseDate,'')
+FROM CollectionCopyDetails WHERE CopyId=$copy";
+            cmd.Parameters.AddWithValue("$copy", _copyId!);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                _cover.IsChecked = IsYes(reader.GetString(0));
+                _case.IsChecked = IsYes(reader.GetString(1));
+                _disc.IsChecked = IsYes(reader.GetString(2));
+                _manual.IsChecked = IsYes(reader.GetString(3));
+                _digitalFormat.Text = reader.GetString(4);
+                _purchaseDate.Text = reader.GetString(5);
+            }
+        }
+
+        UpdateTypePanels();
     }
 
     private async Task SaveAsync()
     {
         if (_release.SelectedItem is not ReleaseChoice release)
         {
-            MessageBox.Show(this, "Choose a release before adding the copy.", "Release required", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Choose a release before saving the copy.", "Release required", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -218,7 +286,7 @@ r.ReleaseYear";
             purchaseDate = parsed.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
-        var copyId = Guid.NewGuid().ToString("N");
+        var copyId = IsEdit ? _copyId! : Guid.NewGuid().ToString("N");
         var now = DateTimeOffset.UtcNow.ToString("O");
         var completeness = copyType == "Physical"
             ? string.Join(", ", new[] { (_case.IsChecked == true, "Case"), (_cover.IsChecked == true, "Cover"), (_disc.IsChecked == true, "Disc"), (_manual.IsChecked == true, "Manual") }.Where(x => x.Item1).Select(x => x.Item2))
@@ -233,20 +301,31 @@ r.ReleaseYear";
             await using (var cmd = db.CreateCommand())
             {
                 cmd.Transaction = (SqliteTransaction)tx;
-                cmd.CommandText = @"INSERT INTO CollectionCopy
+                if (IsEdit)
+                {
+                    cmd.CommandText = @"UPDATE CollectionCopy SET
+ReleaseId=$release,GameId=$game,CopyType=$type,OwnershipStatus='Owned',Condition=$condition,
+Completeness=$completeness,StorageLocation=$storage,DigitalSizeBytes=$size,Notes=$notes,UpdatedUtc=$now
+WHERE CopyId=$copy";
+                }
+                else
+                {
+                    cmd.CommandText = @"INSERT INTO CollectionCopy
 (CopyId,ReleaseId,GameId,CopyType,OwnershipStatus,Condition,Completeness,StorageLocation,DigitalSizeBytes,Notes,CreatedUtc,UpdatedUtc)
 VALUES($copy,$release,$game,$type,'Owned',$condition,$completeness,$storage,$size,$notes,$now,$now)";
+                }
                 cmd.Parameters.AddWithValue("$copy", copyId);
                 cmd.Parameters.AddWithValue("$release", release.ReleaseId);
                 cmd.Parameters.AddWithValue("$game", _gameId);
                 cmd.Parameters.AddWithValue("$type", copyType);
-                cmd.Parameters.AddWithValue("$condition", copyType == "Physical" ? _condition.SelectedItem?.ToString() ?? "Very Good" : "");
+                cmd.Parameters.AddWithValue("$condition", copyType == "Physical" ? _condition.SelectedItem?.ToString() ?? "Very Good" : (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("$completeness", completeness);
                 cmd.Parameters.AddWithValue("$storage", copyType == "Digital" ? _storage.Text.Trim() : "");
                 cmd.Parameters.AddWithValue("$size", sizeBytes is long bytes ? bytes : DBNull.Value);
                 cmd.Parameters.AddWithValue("$notes", _notes.Text.Trim());
                 cmd.Parameters.AddWithValue("$now", now);
-                await cmd.ExecuteNonQueryAsync();
+                if (await cmd.ExecuteNonQueryAsync() < 1)
+                    throw new InvalidOperationException(IsEdit ? "The selected collection entry could not be updated." : "The collection entry could not be created.");
             }
 
             await using (var cmd = db.CreateCommand())
@@ -254,7 +333,10 @@ VALUES($copy,$release,$game,$type,'Owned',$condition,$completeness,$storage,$siz
                 cmd.Transaction = (SqliteTransaction)tx;
                 cmd.CommandText = @"INSERT INTO CollectionCopyDetails
 (CopyId,Edition,CoverPresent,CasePresent,DiscPresent,ManualPresent,CoverCondition,CaseCondition,DiscCondition,ManualCondition,DigitalFormat,OplVersion,OplCompatibility,VmcStatus,PurchaseDate,PurchasePrice,Seller,UpdatedUtc)
-VALUES($copy,'Standard',$cover,$case,$disc,$manual,'Not rated','Not rated','Not rated','Not rated',$format,'','Not tested','Not tested',$date,'','',$now)";
+VALUES($copy,'Standard',$cover,$case,$disc,$manual,'Not rated','Not rated','Not rated','Not rated',$format,'','Not tested','Not tested',$date,'','',$now)
+ON CONFLICT(CopyId) DO UPDATE SET
+CoverPresent=excluded.CoverPresent,CasePresent=excluded.CasePresent,DiscPresent=excluded.DiscPresent,ManualPresent=excluded.ManualPresent,
+DigitalFormat=excluded.DigitalFormat,PurchaseDate=excluded.PurchaseDate,UpdatedUtc=excluded.UpdatedUtc";
                 cmd.Parameters.AddWithValue("$copy", copyId);
                 cmd.Parameters.AddWithValue("$cover", copyType == "Physical" ? YesNo(_cover) : "Not applicable");
                 cmd.Parameters.AddWithValue("$case", copyType == "Physical" ? YesNo(_case) : "Not applicable");
@@ -271,7 +353,7 @@ VALUES($copy,'Standard',$cover,$case,$disc,$manual,'Not rated','Not rated','Not 
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Add to Collection failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, ex.Message, IsEdit ? "Edit Collection Entry failed" : "Add to Collection failed", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -281,6 +363,7 @@ VALUES($copy,'Standard',$cover,$case,$disc,$manual,'Not rated','Not rated','Not 
         _digitalPanel.Visibility = _digital.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private static bool IsYes(string value) => string.Equals(value, "Yes", StringComparison.OrdinalIgnoreCase);
     private static string YesNo(CheckBox box) => box.IsChecked == true ? "Yes" : "No";
 
     private static bool TryDecimal(string text, out decimal value)
