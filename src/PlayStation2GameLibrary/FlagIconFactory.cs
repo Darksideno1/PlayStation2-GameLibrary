@@ -29,6 +29,8 @@ internal static class FlagIconFactory
             "ko" or "kor" or "korean" => "kr",
             "zh" or "zho" or "chi" or "chinese" => "cn",
             "cs" or "ces" or "cze" or "czech" => "cz",
+            "hu" or "hun" or "hungarian" => "hu",
+            "tr" or "tur" or "turkish" => "tr",
             _ => string.Empty
         };
         return key.Length == 0 ? null : Get(key);
@@ -74,7 +76,7 @@ internal static class FlagIconFactory
                 AddRect(group, 0, 0, 15, 13, Color.FromRgb(33, 70, 139));
                 break;
             case "gb":
-                AddNordicLikeCross(group, Color.FromRgb(33, 70, 139), Colors.White, Color.FromRgb(207, 20, 43), centered: true);
+                AddUnionJack(group);
                 break;
             case "nl":
                 AddHorizontalTricolor(group, Color.FromRgb(174, 28, 40), Colors.White, Color.FromRgb(33, 70, 139));
@@ -121,10 +123,18 @@ internal static class FlagIconFactory
             case "cz":
                 AddRect(group, 0, 0, 36, 12, Colors.White);
                 AddRect(group, 0, 12, 36, 12, Color.FromRgb(215, 20, 26));
-                // Compact blue wedge approximation that remains crisp at 22–27 px display widths.
-                AddRect(group, 0, 0, 9, 24, Color.FromRgb(17, 69, 126));
+                AddPolygon(group, Color.FromRgb(17, 69, 126), new Point(0, 0), new Point(15, 12), new Point(0, 24));
                 break;
-            default: // EU/PAL visual
+            case "hu":
+                AddHorizontalTricolor(group, Color.FromRgb(206, 42, 55), Colors.White, Color.FromRgb(67, 111, 77));
+                break;
+            case "tr":
+                AddRect(group, 0, 0, 36, 24, Color.FromRgb(227, 10, 23));
+                AddEllipse(group, 9, 6, 12, 12, Colors.White);
+                AddEllipse(group, 12, 7.5, 10, 9, Color.FromRgb(227, 10, 23));
+                AddEllipse(group, 21, 9, 3, 3, Colors.White);
+                break;
+            default:
                 AddRect(group, 0, 0, 36, 24, Color.FromRgb(23, 71, 166));
                 for (var i = 0; i < 12; i++)
                 {
@@ -140,6 +150,23 @@ internal static class FlagIconFactory
         image.Freeze();
         Cache[key] = image;
         return image;
+    }
+
+    private static void AddUnionJack(DrawingGroup group)
+    {
+        var blue = Color.FromRgb(1, 33, 105);
+        var red = Color.FromRgb(200, 16, 46);
+        AddRect(group, 0, 0, 36, 24, blue);
+
+        AddPolygon(group, Colors.White, new Point(0, 0), new Point(5, 0), new Point(36, 19), new Point(36, 24), new Point(31, 24), new Point(0, 5));
+        AddPolygon(group, Colors.White, new Point(31, 0), new Point(36, 0), new Point(36, 5), new Point(5, 24), new Point(0, 24), new Point(0, 19));
+        AddPolygon(group, red, new Point(0, 0), new Point(2.8, 0), new Point(36, 21.2), new Point(36, 24), new Point(33.2, 24), new Point(0, 2.8));
+        AddPolygon(group, red, new Point(33.2, 0), new Point(36, 0), new Point(36, 2.8), new Point(2.8, 24), new Point(0, 24), new Point(0, 21.2));
+
+        AddRect(group, 14, 0, 8, 24, Colors.White);
+        AddRect(group, 0, 8, 36, 8, Colors.White);
+        AddRect(group, 16, 0, 4, 24, red);
+        AddRect(group, 0, 10, 36, 4, red);
     }
 
     private static void AddHorizontalTricolor(DrawingGroup group, Color a, Color b, Color c)
@@ -171,6 +198,19 @@ internal static class FlagIconFactory
         AddRect(group, 0, 8.5, 36, 7, outer);
         AddRect(group, x, 0, 3, 24, inner);
         AddRect(group, 0, 10.5, 36, 3, inner);
+    }
+
+    private static void AddPolygon(DrawingGroup group, Color color, params Point[] points)
+    {
+        if (points.Length < 3) return;
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
+        {
+            context.BeginFigure(points[0], isFilled: true, isClosed: true);
+            context.PolyLineTo(points.Skip(1).ToArray(), isStroked: true, isSmoothJoin: false);
+        }
+        geometry.Freeze();
+        group.Children.Add(new GeometryDrawing(new SolidColorBrush(color), null, geometry));
     }
 
     private static void AddRect(DrawingGroup group, double x, double y, double width, double height, Color color) =>
