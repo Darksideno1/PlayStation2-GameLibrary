@@ -20,6 +20,11 @@ internal static class ConceptualCatalogGridBootstrap
     private static void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is not MainWindow window || !ReferenceEquals(e.OriginalSource, window)) return;
+
+        // VisualPolish also touches the catalogue columns during OnContentRendered.
+        // Re-apply the conceptual-game grid afterwards so a release serial can never
+        // reappear as the ID of a conceptual game just because of event ordering.
+        window.ContentRendered += (_, _) => window.ApplyConceptualCatalogGrid();
         window.Dispatcher.BeginInvoke(DispatcherPriority.SystemIdle, new Action(window.ApplyConceptualCatalogGrid));
     }
 }
@@ -30,9 +35,6 @@ public partial class MainWindow
 
     internal void ApplyConceptualCatalogGrid()
     {
-        if (_conceptualCatalogGridApplied) return;
-        _conceptualCatalogGridApplied = true;
-
         GamesGrid.RowHeight = double.NaN;
         GamesGrid.MinRowHeight = 48;
         GamesGrid.Columns.Clear();
@@ -61,11 +63,15 @@ public partial class MainWindow
             Header = "OWNED", Width = 180, MinWidth = 145, CellTemplate = BuildEnhancedOwnedTemplate()
         });
 
-        GamesGrid.SelectionChanged += async (_, _) =>
+        if (!_conceptualCatalogGridApplied)
         {
-            if (GamesGrid.SelectedItem is GameListItem selected)
-                await UpdateConceptualCatalogSideAsync(selected);
-        };
+            _conceptualCatalogGridApplied = true;
+            GamesGrid.SelectionChanged += async (_, _) =>
+            {
+                if (GamesGrid.SelectedItem is GameListItem selected)
+                    await UpdateConceptualCatalogSideAsync(selected);
+            };
+        }
 
         if (GamesGrid.SelectedItem is GameListItem current)
             _ = UpdateConceptualCatalogSideAsync(current);
