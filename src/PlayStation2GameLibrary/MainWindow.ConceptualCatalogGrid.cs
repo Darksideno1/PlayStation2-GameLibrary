@@ -21,10 +21,11 @@ internal static class ConceptualCatalogGridBootstrap
     {
         if (sender is not MainWindow window || !ReferenceEquals(e.OriginalSource, window)) return;
 
-        // VisualPolish also touches the catalogue columns during OnContentRendered.
-        // Re-apply the conceptual-game grid afterwards so a release serial can never
-        // reappear as the ID of a conceptual game just because of event ordering.
-        window.ContentRendered += (_, _) => window.ApplyConceptualCatalogGrid();
+        // MainWindow.VisualPolish calls base.OnContentRendered() first and only then
+        // rebuilds the legacy catalogue columns. Queue our rebuild so it runs after
+        // the entire OnContentRendered override has returned.
+        window.ContentRendered += (_, _) =>
+            window.Dispatcher.BeginInvoke(DispatcherPriority.Send, new Action(window.ApplyConceptualCatalogGrid));
         window.Dispatcher.BeginInvoke(DispatcherPriority.SystemIdle, new Action(window.ApplyConceptualCatalogGrid));
     }
 }
