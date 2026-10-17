@@ -18,7 +18,6 @@ var staThread = new System.Threading.Thread(() =>
         Exception? error = null;
         var completed = false;
         var app = new PlayStation2GameLibrary.App { ShutdownMode = ShutdownMode.OnMainWindowClose };
-        // The smoke harness supplies MainWindow explicitly; no StartupUri is needed.
         var window = new MainWindow();
         var deadline = DateTime.UtcNow.AddSeconds(90);
         var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -29,38 +28,42 @@ var staThread = new System.Threading.Thread(() =>
             {
                 if (DateTime.UtcNow > deadline) throw new TimeoutException("Catalogue UI did not load the full catalogue within 90 seconds.");
                 var grid = (DataGrid)window.FindName("GamesGrid");
-                // The bundled development seed contains well over 3,000 games. Waiting for
-                // this threshold proves the old LIMIT 2000 catalogue query is no longer active.
                 if (grid.Items.Count < 3000) return;
                 timer.Stop();
                 window.UpdateLayout();
-                var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                    Math.Max(1, (int)window.ActualWidth), Math.Max(1, (int)window.ActualHeight),
-                    96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                bitmap.Render(window);
-                var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
-                var screenshotPath = Path.Combine(Directory.GetCurrentDirectory(), "tests", "WindowsGuiSmoke", "catalogue-screenshot.png");
-                using (var stream = File.Create(screenshotPath)) png.Save(stream);
+                CaptureWindow(window, "catalogue-screenshot.png");
+
                 grid.SelectedIndex = 0;
                 var selected = grid.SelectedItem;
                 if (selected is null) throw new Exception("Cannot select catalogue game.");
 
-                // Open the selected game's real Game Details action and verify that it stays in the main window.
                 var detailsButton = FindVisualChildren<Button>(window).First(x => string.Equals((string?)x.Content, "Open Game Details", StringComparison.OrdinalIgnoreCase));
                 detailsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 window.UpdateLayout();
                 var pageTitle = (TextBlock)window.FindName("PageTitle");
                 if (!string.Equals(pageTitle.Text, "Game Details", StringComparison.Ordinal))
                     throw new Exception($"Open Game Details did not navigate inside the main window. Current page: {pageTitle.Text}");
-                var backButton = FindVisualChildren<Button>(window).FirstOrDefault(x => string.Equals((string?)x.Content, "← Back to Catalog", StringComparison.Ordinal));
+
+                var allButtons = FindVisualChildren<Button>(window).ToList();
+                var allText = FindVisualChildren<TextBlock>(window).ToList();
+                var backButton = allButtons.FirstOrDefault(x => string.Equals((string?)x.Content, "← Back to Catalog", StringComparison.Ordinal));
                 if (backButton is null) throw new Exception("Inline Game Details did not create Back to Catalog navigation.");
+                if (!allButtons.Any(x => string.Equals((string?)x.Content, "Overview", StringComparison.Ordinal)))
+                    throw new Exception("Approved Game Details Overview tab is missing.");
+                if (!allButtons.Any(x => string.Equals((string?)x.Content, "Regions & Releases", StringComparison.Ordinal)))
+                    throw new Exception("Approved Game Details Regions & Releases tab is missing.");
+                if (!allText.Any(x => string.Equals(x.Text, "Quick Facts", StringComparison.Ordinal)))
+                    throw new Exception("Approved Game Details Quick Facts card is missing.");
+                if (!allText.Any(x => string.Equals(x.Text, "Physical copies", StringComparison.Ordinal)))
+                    throw new Exception("Approved Game Details collection summary is missing.");
+
+                CaptureWindow(window, "game-details-screenshot.png");
+
                 backButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 window.UpdateLayout();
                 if (!string.Equals(pageTitle.Text, "Catalog", StringComparison.Ordinal))
                     throw new Exception("Back to Catalog did not restore the catalogue view.");
 
-                // Use the real catalogue action, not a directly constructed editor.
                 var saved = false;
                 var editorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
                 editorTimer.Tick += (_, _) =>
@@ -98,7 +101,7 @@ var staThread = new System.Threading.Thread(() =>
                     if (Convert.ToInt64(cmd.ExecuteScalar()) != 1)
                         throw new Exception("Add to Collection did not persist through UI.");
                     completed = true;
-                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games (>2,000), opens Game Details inline, returns to Catalog, adds a collection copy and persists it to SQLite.");
+                    Console.WriteLine($"PASS: Catalog displays {grid.Items.Count:N0} games, approved Game Details layout opens inline, returns to Catalog, and collection persistence works.");
                 }
                 window.Close();
             }
@@ -116,6 +119,20 @@ staThread.SetApartmentState(System.Threading.ApartmentState.STA);
 staThread.Start();
 staThread.Join();
 if (threadError is not null) throw threadError;
+
+static void CaptureWindow(Window window, string fileName)
+{
+    window.UpdateLayout();
+    var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+        Math.Max(1, (int)window.ActualWidth), Math.Max(1, (int)window.ActualHeight),
+        96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+    bitmap.Render(window);
+    var png = new System.Windows.Media.Imaging.PngBitmapEncoder();
+    png.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+    var screenshotPath = Path.Combine(Directory.GetCurrentDirectory(), "tests", "WindowsGuiSmoke", fileName);
+    using var stream = File.Create(screenshotPath);
+    png.Save(stream);
+}
 
 static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(System.Windows.DependencyObject root) where T : System.Windows.DependencyObject
 {
