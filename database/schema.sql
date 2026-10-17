@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS Game (
     FirstReleaseYear INTEGER NULL CHECK (FirstReleaseYear IS NULL OR FirstReleaseYear BETWEEN 1970 AND 2100),
     Developer TEXT NULL,
     Description TEXT NULL,
+    Genres TEXT NULL,
     PrimaryGameImagePath TEXT NULL,
     CreatedUtc TEXT NOT NULL,
     UpdatedUtc TEXT NOT NULL
@@ -210,5 +211,11 @@ CREATE TABLE IF NOT EXISTS CollectionCopyDetails (
     PurchaseDate TEXT NOT NULL DEFAULT '',
     PurchasePrice TEXT NOT NULL DEFAULT '',
     Seller TEXT NOT NULL DEFAULT '',
+    UpdatedUtc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS MetadataImportState (
+    StateKey TEXT PRIMARY KEY,
+    StateValue TEXT NOT NULL,
     UpdatedUtc TEXT NOT NULL
 );
