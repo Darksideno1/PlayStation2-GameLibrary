@@ -31,6 +31,8 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     & $pythonCommand @pythonPrefixArgs tests/validate_static.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & $pythonCommand @pythonPrefixArgs tests/validate_full_catalog.py --report FULL_CATALOG_VALIDATION.txt
+    if ($LASTEXITCODE -ne 0) { throw 'Full GameDB catalogue validation failed.' }
     & $dotnetCommand.Source run --project tests/WindowsSmoke/WindowsSmoke.csproj --configuration Release
     if ($LASTEXITCODE -ne 0) { throw 'Catalogue → Add to Collection → reopen persistence smoke test failed.' }
     & $dotnetCommand.Source run --project tests/WindowsGuiSmoke/WindowsGuiSmoke.csproj --configuration Release
@@ -56,7 +58,7 @@ try {
     'Application settings are stored here as settings.json.' | Set-Content (Join-Path $Stage 'Config/README.txt') -Encoding UTF8
     'Copy front cover images into Covers. ONE GAME = ONE FRONT COVER.' | Set-Content (Join-Path $Stage 'Media/Covers/README.txt') -Encoding UTF8
 
-    foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','README.md')) {
+    foreach ($file in @('Version.txt','CHANGELOG.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','README.md','FULL_CATALOG_VALIDATION.txt')) {
         if (Test-Path $file) { Copy-Item $file $Stage -Force }
     }
     Copy-Item 'docs/PORTABLE_USER_GUIDE.md' $Stage -Force
@@ -74,7 +76,7 @@ The program no longer reuses the old %LOCALAPPDATA% test database by default.
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
     try {
         $names = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt')) {
+        foreach ($required in @('USER/PlayStation2GameLibrary.exe','ADMIN/PlayStation2GameLibrary.exe','USER/database/schema.sql','ADMIN/database/schema.sql','USER/data/GameDB-PS2.seed.json','ADMIN/data/GameDB-PS2.seed.json','Data/README.txt','Config/README.txt','Media/Covers/README.txt','FUNKCIONALNOSTI.txt','TEST_CHECKLIST.txt','FULL_CATALOG_VALIDATION.txt')) {
             if ($names -notcontains $required) { throw "ZIP missing $required" }
         }
     } finally { $archive.Dispose() }
