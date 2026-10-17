@@ -38,8 +38,9 @@ public partial class MainWindow
         var cover = FindNamed<Image>(_inlineGameDetailsPage, "InlineCoverImage");
         if (cover?.Parent is Grid coverGrid && coverGrid.Parent is Border coverFrame)
         {
-            coverFrame.Width = 230;
-            coverFrame.Height = 310;
+            var coverHeight = _inlineGameDetailsPage.ActualHeight < 520 ? 285d : 340d;
+            coverFrame.Height = coverHeight;
+            coverFrame.Width = Math.Round(coverHeight * 0.72);
         }
 
         var overview = FindNamed<StackPanel>(_inlineGameDetailsPage, "InlineOverviewPanel");
